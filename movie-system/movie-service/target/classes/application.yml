@@ -1,0 +1,60 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: movie-service
+
+  datasource:
+    # Cấu hình kết nối SQL Server
+    url: jdbc:sqlserver://localhost:1433;databaseName=master;encrypt=true;trustServerCertificate=true;
+    username: ${DB_USER:SA}
+    password: ${DB_PASS:Dg15062003@}
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+
+  jpa:
+    hibernate:
+      ddl-auto: update          # production: validate. Dev: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.SQLServerDialect
+        default_batch_fetch_size: 20  # chống N+1 cho collections
+
+# Cấu hình MinIO
+minio:
+  url: http://localhost:9000
+  accessKey: admin123
+  secretKey: password123
+  bucket: movies
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    com.movie: DEBUG
+    org.springframework.web: INFO

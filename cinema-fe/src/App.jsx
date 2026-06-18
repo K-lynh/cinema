@@ -45,6 +45,20 @@ async function apiPostForm(path, fd) {
   if (!r.ok) throw new Error(r.status);
   return r.json();
 }
+async function apiPut(path, body) {
+  const r = await fetch(GW + path, { method: "PUT", headers: authHeader(), body: JSON.stringify(body) });
+  if (!r.ok) { const errText = await r.text(); throw new Error(errText || r.status); }
+  const text = await r.text();
+  try { return JSON.parse(text); } catch (e) { return text; }
+}
+
+async function apiPutForm(path, fd) {
+  const h = { "Authorization": `Bearer ${getToken()}` };
+  const r = await fetch(GW + path, { method: "PUT", headers: h, body: fd });
+  if (!r.ok) { const errText = await r.text(); throw new Error(errText || r.status); }
+  const text = await r.text();
+  try { return JSON.parse(text); } catch (e) { return text; }
+}
 
 // ═══════════════════════════════════════════════════════════════
 //  UTILS
@@ -87,42 +101,51 @@ function genSeats(capacity = 60, booked = []) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  CSS / DESIGN SYSTEM
+//  CSS / DESIGN SYSTEM (NÂNG CẤP PREMIUM)
 // ═══════════════════════════════════════════════════════════════
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;0,500;0,700;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;0,500;0,700;1,300;1,400&family=DM+Sans:wght@300;400;500;700&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:   #080810; --bg2: #0f0f1c; --bg3: #181828;
-  --brd:  rgba(255,255,255,.07); --brd2: rgba(255,255,255,.14);
-  --gold: #c9914a; --gold2: #e8b86d;
-  --aqua: #4ecdc4; --red: #e05555;
-  --txt:  #ece6db; --txt2: #888899; --dim: #3c3c54;
+  --bg:   #06060c; /* Đen sâu hơn */
+  --bg2:  #11111a; 
+  --bg3:  #1a1a2e;
+  --brd:  rgba(255,255,255,.08); 
+  --gold: #dfa65b; /* Vàng sáng và sang hơn */
+  --gold-glow: rgba(223, 166, 91, 0.3);
+  --aqua: #4ecdc4; --red: #e63946;
+  --txt:  #f8f9fa; --txt2: #adb5bd; --dim: #495057;
   --ff:   'Cormorant', Georgia, serif;
   --fb:   'DM Sans', system-ui, sans-serif;
 }
 
 html { scroll-behavior: smooth; }
-body { background: var(--bg); color: var(--txt); font-family: var(--fb); font-size: 15px; line-height: 1.65; min-height: 100vh; }
+body { background: var(--bg); color: var(--txt); font-family: var(--fb); font-size: 15px; line-height: 1.6; min-height: 100vh; overflow-x: hidden; }
 button { cursor: pointer; border: none; background: none; font-family: var(--fb); }
 input, select, textarea { font-family: var(--fb); }
 img { display: block; }
 
-::-webkit-scrollbar { width: 3px; height: 3px; }
-::-webkit-scrollbar-track { background: var(--bg2); }
-::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 3px; }
+/* Scrollbar tinh tế hơn */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--gold); }
 
-@keyframes up   { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:none; } }
-@keyframes spin { to { transform: rotate(360deg); } }
-@keyframes glim { 0%,100%{opacity:1} 50%{opacity:.35} }
+/* Utility Classes */
+.glass { background: rgba(17, 17, 26, 0.6); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--brd); }
+.gold-text { background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
-.fu  { animation: up .36s ease both; }
-.fu2 { animation: up .36s .08s ease both; }
-.fu3 { animation: up .36s .16s ease both; }
-.spin { display: inline-block; animation: spin .65s linear infinite; }
-.skel { animation: glim 1.4s infinite; background: var(--bg3); border-radius: 8px; }
+@keyframes slideInRight { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pulseGlow { 0% { box-shadow: 0 0 0 0 var(--gold-glow); } 70% { box-shadow: 0 0 15px 10px rgba(223,166,91,0); } 100% { box-shadow: 0 0 0 0 rgba(223,166,91,0); } }
+
+.fu  { animation: up .5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.fu2 { animation: up .5s cubic-bezier(0.16, 1, 0.3, 1) .1s forwards; opacity: 0; }
+.fu3 { animation: up .5s cubic-bezier(0.16, 1, 0.3, 1) .2s forwards; opacity: 0; }
+.spin { display: inline-block; animation: spin .8s linear infinite; }
 `;
 
 // ═══════════════════════════════════════════════════════════════
@@ -210,9 +233,9 @@ function MovieCard({ movie, onClick, compact }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  NAVBAR
+//  NAVBAR (CÓ TÍCH HỢP NÚT BACK GÓC TRÁI)
 // ═══════════════════════════════════════════════════════════════
-function Navbar({ page, setPage, user, setUser }) {
+function Navbar({ page, setPage, user, setUser, canGoBack, goBack }) {
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
     const h = () => setScrolled(window.scrollY > 40);
@@ -221,8 +244,25 @@ function Navbar({ page, setPage, user, setUser }) {
   }, []);
 
   return (
-    <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, height: 60, padding: "0 5vw", display: "flex", alignItems: "center", justifyContent: "space-between", background: scrolled ? "rgba(8,8,16,.94)" : "transparent", backdropFilter: scrolled ? "blur(18px)" : "none", borderBottom: scrolled ? "1px solid var(--brd)" : "none", transition: "all .3s" }}>
-      <div onClick={() => setPage("home")} style={{ fontFamily: "var(--ff)", fontStyle: "italic", fontSize: 22, fontWeight: 300, color: "var(--gold)", cursor: "pointer", letterSpacing: 1 }}>◈ CINÉ</div>
+    <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, height: 60, padding: "0 5vw", display: "flex", alignItems: "center", justifyContent: "space-between", background: scrolled ? "rgba(6,6,12,.94)" : "transparent", backdropFilter: scrolled ? "blur(18px)" : "none", borderBottom: scrolled ? "1px solid var(--brd)" : "none", transition: "all .3s" }}>
+
+      {/* KHU VỰC LOGO & NÚT QUAY LẠI */}
+      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <div onClick={() => setPage("home")} style={{ fontFamily: "var(--ff)", fontStyle: "italic", fontSize: 24, fontWeight: 700, color: "var(--gold)", cursor: "pointer", letterSpacing: 1 }}>◈ CINÉ</div>
+
+        {canGoBack && (
+          <button
+            onClick={goBack} title="Quay lại trang trước"
+            style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.06)", border: "1px solid var(--brd)", color: "var(--txt)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "all 0.2s", fontSize: 16 }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.15)"; e.currentTarget.style.color = "var(--gold)"; e.currentTarget.style.borderColor = "var(--gold)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "var(--txt)"; e.currentTarget.style.borderColor = "var(--brd)"; }}
+          >
+            ←
+          </button>
+        )}
+
+      </div>
+
       <div style={{ display: "flex", gap: 4 }}>
         {[["home", "Trang chủ"], ["search", "Tìm kiếm AI"], ["admin", "Admin"], ["scanner", "Soát vé"]].map(([k, l]) => (
           <button key={k} onClick={() => setPage(k)} style={{ padding: "6px 14px", borderRadius: 6, fontSize: 13, fontWeight: 500, border: "none", cursor: "pointer", transition: "all .2s", color: page === k ? "var(--gold)" : "var(--txt2)", background: page === k ? "rgba(201,145,74,.12)" : "transparent" }}>{l}</button>
@@ -241,8 +281,9 @@ function Navbar({ page, setPage, user, setUser }) {
     </nav>
   );
 }
+
 // ═══════════════════════════════════════════════════════════════
-//  HOME PAGE
+//  HOME PAGE (NÂNG CẤP PREMIUM)
 // ═══════════════════════════════════════════════════════════════
 function HomePage({ onSelect }) {
   const [movies, setMovies] = useState([]);
@@ -259,46 +300,58 @@ function HomePage({ onSelect }) {
 
   useEffect(() => {
     if (movies.length < 2) return;
-    const t = setInterval(() => setHeroIdx(i => (i + 1) % Math.min(movies.length, 5)), 5500);
+    const t = setInterval(() => setHeroIdx(i => (i + 1) % Math.min(movies.length, 5)), 6000);
     return () => clearInterval(t);
   }, [movies.length]);
 
-  // SỬA Ở ĐÂY: API không có trường 'status', nên gán trực tiếp movies vào showing
   const showing = movies;
   const coming = [];
   const hero = showing[heroIdx % Math.max(showing.length, 1)];
 
   return (
     <div style={{ paddingBottom: 80 }}>
-      {/* Hero */}
+      {/* Hero Section - Full Viewport Height */}
       {hero && (
-        <div style={{ position: "relative", height: "90vh", minHeight: 520, overflow: "hidden" }}>
-          <img src={hero.posterUrl || `https://picsum.photos/seed/h${hero.id}/900/500`} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", filter: "blur(4px) brightness(.24)", transform: "scale(1.07)", transition: "all 1.2s" }} />
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(120deg,rgba(8,8,16,.94) 0%,rgba(8,8,16,.25) 62%,transparent)" }} />
-          <div style={{ position: "relative", zIndex: 2, height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 8vw", paddingTop: 60 }}>
-            <div className="fu" style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-              <Badge color="var(--aqua)">Đang chiếu</Badge>
+        <div style={{ position: "relative", height: "100vh", minHeight: 600, width: "100vw", overflow: "hidden", left: "50%", right: "50%", marginLeft: "-50vw", marginRight: "-50vw" }}>
+          {/* Background Image with Vignette effect */}
+          <div style={{ position: "absolute", inset: 0 }}>
+            <img src={hero.posterUrl || `https://picsum.photos/seed/h${hero.id}/1920/1080`} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scale(1.05)", transition: "all 1.5s ease-out", filter: "brightness(0.6)" }} />
+            {/* Gradient Mask: Đen dần về phía dưới để nối với body */}
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, var(--bg) 0%, transparent 60%, rgba(6,6,12,0.6) 100%)" }} />
+            <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at right, transparent 0%, var(--bg) 120%)" }} />
+          </div>
+
+          <div style={{ position: "relative", zIndex: 2, height: "100%", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 6vw 100px", maxWidth: 1200, margin: "0 auto" }}>
+            <div className="fu" style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+              <Badge color="var(--aqua)">Đang thịnh hành</Badge>
               {hero.genre && <Badge>{hero.genre}</Badge>}
             </div>
-            <h1 className="fu2" style={{ fontFamily: "var(--ff)", fontStyle: "italic", fontSize: "clamp(38px,6vw,78px)", fontWeight: 300, lineHeight: 1.08, marginBottom: 12, maxWidth: 560 }}>{hero.title}</h1>
-            <div className="fu2" style={{ display: "flex", gap: 16, color: "var(--txt2)", fontSize: 13, marginBottom: 14, flexWrap: "wrap" }}>
+
+            <h1 className="fu2 gold-text" style={{ fontFamily: "var(--ff)", fontStyle: "italic", fontSize: "clamp(48px, 8vw, 96px)", fontWeight: 700, lineHeight: 1, marginBottom: 20, textShadow: "0 10px 30px rgba(0,0,0,0.8)" }}>
+              {hero.title}
+            </h1>
+
+            <div className="fu2" style={{ display: "flex", gap: 20, color: "var(--txt)", fontSize: 15, marginBottom: 24, fontWeight: 500, textShadow: "0 2px 10px rgba(0,0,0,0.8)", flexWrap: "wrap" }}>
               {hero.rating && <Stars v={hero.rating} />}
               {hero.duration && <span>⏱ {hero.duration}</span>}
               {hero.director && <span>🎬 {hero.director}</span>}
-              {/* SỬA Ở ĐÂY: Đổi hero.releaseYear thành hero.year cho khớp API */}
               {hero.year && <span>📅 {hero.year}</span>}
             </div>
-            {hero.description && <p className="fu3" style={{ maxWidth: 430, color: "rgba(236,230,219,.7)", lineHeight: 1.8, marginBottom: 26, fontSize: 14 }}>{hero.description.slice(0, 140)}{hero.description.length > 140 ? "…" : ""}</p>}
-            <div className="fu3" style={{ display: "flex", gap: 12 }}>
-              <Btn size="lg" onClick={() => onSelect(hero)}>🎬 Đặt vé ngay</Btn>
-              <Btn size="lg" variant="ghost" onClick={() => onSelect(hero)}>Xem chi tiết</Btn>
+
+            {hero.description && <p className="fu3" style={{ maxWidth: 600, color: "rgba(255,255,255,.8)", lineHeight: 1.7, marginBottom: 36, fontSize: 15, textShadow: "0 2px 10px rgba(0,0,0,0.8)" }}>{hero.description.slice(0, 160)}{hero.description.length > 160 ? "..." : ""}</p>}
+
+            <div className="fu3" style={{ display: "flex", gap: 16 }}>
+              <Btn size="lg" onClick={() => onSelect(hero)} style={{ padding: "16px 40px", fontSize: 16, borderRadius: 30, animation: "pulseGlow 2s infinite" }}>🎬 Đặt vé ngay</Btn>
+              <Btn size="lg" variant="ghost" onClick={() => onSelect(hero)} style={{ padding: "16px 40px", fontSize: 16, borderRadius: 30, backdropFilter: "blur(10px)", background: "rgba(255,255,255,0.1)" }}>Chi tiết</Btn>
             </div>
           </div>
+
+          {/* Carousel thumbnails */}
           {showing.length > 1 && (
-            <div style={{ position: "absolute", bottom: 26, left: "8vw", display: "flex", gap: 9, zIndex: 2 }}>
+            <div style={{ position: "absolute", bottom: 40, right: "6vw", display: "flex", gap: 12, zIndex: 2 }}>
               {showing.slice(0, 5).map((m, i) => (
-                <div key={m.id} onClick={() => setHeroIdx(i)} style={{ width: i === heroIdx ? 68 : 48, height: i === heroIdx ? 68 : 48, borderRadius: 8, overflow: "hidden", cursor: "pointer", border: `2px solid ${i === heroIdx ? "var(--gold)" : "transparent"}`, opacity: i === heroIdx ? 1 : .42, transition: "all .3s" }}>
-                  <img src={m.posterUrl || `https://picsum.photos/seed/th${m.id}/100/150`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                <div key={m.id} onClick={() => setHeroIdx(i)} style={{ width: i === heroIdx ? 90 : 60, height: i === heroIdx ? 135 : 90, borderRadius: 12, overflow: "hidden", cursor: "pointer", border: `2px solid ${i === heroIdx ? "var(--gold)" : "transparent"}`, opacity: i === heroIdx ? 1 : 0.5, transition: "all 0.4s cubic-bezier(0.16, 1, 0.3, 1)", boxShadow: "0 10px 20px rgba(0,0,0,0.5)", transformOrigin: "bottom" }}>
+                  <img src={m.posterUrl || `https://picsum.photos/seed/th${m.id}/200/300`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 </div>
               ))}
             </div>
@@ -306,21 +359,17 @@ function HomePage({ onSelect }) {
         </div>
       )}
 
-      <div style={{ padding: "52px 5vw 0" }}>
-        {err && <div style={{ color: "var(--txt2)", textAlign: "center", padding: "40px 0" }}>
-          <div style={{ fontSize: 38, marginBottom: 10 }}>⚠️</div>
-          <p>Không kết nối được backend ({err})</p>
-          <p style={{ fontSize: 12, color: "var(--dim)", marginTop: 6 }}>Kiểm tra api-gateway tại localhost:8080 và đăng nhập để lấy JWT token</p>
-        </div>}
-
+      {/* Danh sách phim */}
+      <div style={{ padding: "80px 5vw 0", maxWidth: 1400, margin: "0 auto" }}>
+        {err && <div style={{ color: "var(--txt2)", textAlign: "center", padding: "40px 0" }}>⚠️ Lỗi kết nối: {err}</div>}
         {loading ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(175px,1fr))", gap: 20 }}>
-            {Array(8).fill(0).map((_, i) => <div key={i} className="skel" style={{ aspectRatio: "2/3", borderRadius: 12 }} />)}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 24 }}>
+            {Array(10).fill(0).map((_, i) => <div key={i} className="skel" style={{ aspectRatio: "2/3", borderRadius: 16 }} />)}
           </div>
         ) : (
           <>
-            {showing.length > 0 && <Section title="Đang chiếu" movies={showing} onSelect={onSelect} />}
-            {coming.length > 0 && <Section title="Sắp chiếu" movies={coming} onSelect={onSelect} style={{ marginTop: 52 }} />}
+            {showing.length > 0 && <Section title="Phim Đang Chiếu" movies={showing} onSelect={onSelect} />}
+            {coming.length > 0 && <Section title="Sắp Chiếu" movies={coming} onSelect={onSelect} style={{ marginTop: 60 }} />}
           </>
         )}
       </div>
@@ -328,15 +377,16 @@ function HomePage({ onSelect }) {
   );
 }
 
+// KHÔNG ĐƯỢC XÓA HÀM NÀY - HÀM RENDER TỪNG SECTION PHIM
 function Section({ title, movies, onSelect, style = {} }) {
   return (
     <div style={style}>
-      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 22 }}>
-        <h2 style={{ fontFamily: "var(--ff)", fontStyle: "italic", fontSize: 28, fontWeight: 300, whiteSpace: "nowrap" }}>{title}</h2>
-        <div style={{ flex: 1, height: 1, background: "var(--brd)" }} />
-        <span style={{ fontSize: 12, color: "var(--txt2)" }}>{movies.length} phim</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
+        <h2 className="gold-text" style={{ fontFamily: "var(--ff)", fontStyle: "italic", fontSize: 32, fontWeight: 700, whiteSpace: "nowrap", margin: 0 }}>{title}</h2>
+        <div style={{ flex: 1, height: 1, background: "linear-gradient(90deg, var(--gold) 0%, transparent 100%)", opacity: 0.3 }} />
+        <span style={{ fontSize: 13, color: "var(--txt2)", textTransform: "uppercase", letterSpacing: 1 }}>{movies.length} Phim</span>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(175px,1fr))", gap: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: 24 }}>
         {movies.map(m => <MovieCard key={m.id} movie={m} onClick={onSelect} />)}
       </div>
     </div>
@@ -344,113 +394,78 @@ function Section({ title, movies, onSelect, style = {} }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  MOVIE DETAIL
+//  MOVIE DETAIL (NÂNG CẤP)
 // ═══════════════════════════════════════════════════════════════
 function MovieDetailPage({ movie, onBook }) {
   const [detail, setDetail] = useState(movie);
-  const [showTrailer, setShowTrailer] = useState(false); // State quản lý mở/đóng Modal Trailer
+  const [showTrailer, setShowTrailer] = useState(false);
 
   useEffect(() => {
-    apiGet(`/api/movies/${movie.id}`)
-      .then(data => setDetail(data))
-      .catch(console.error);
+    apiGet(`/api/movies/${movie.id}`).then(data => setDetail(data)).catch(console.error);
   }, [movie.id]);
 
   const poster = detail.posterUrl || `https://picsum.photos/seed/dt${detail.id}/400/600`;
-
-  // Kiểm tra xem phim có trailer không (dựa trên trường trailerUrl bạn đã map ở BE)
   const hasTrailer = !!detail.trailerUrl;
-
-  // Hàm chuyển đổi URL Youtube dạng watch?v= sang dạng embed/ (để iframe có thể phát)
   const getEmbedUrl = (url) => {
     if (!url) return "";
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
     const match = url.match(regExp);
-    return (match && match[2].length === 11)
-      ? `https://www.youtube.com/embed/${match[2]}?autoplay=1`
-      : url; // Trả lại url gốc nếu không phải dạng chuẩn Youtube
+    return (match && match[2].length === 11) ? `https://www.youtube.com/embed/${match[2]}?autoplay=1` : url;
   };
 
   return (
-    <div style={{ paddingTop: 100, paddingLeft: "5vw", paddingRight: "5vw", minHeight: "100vh", position: "relative" }}>
-      <div className="fu" style={{ display: "flex", gap: 40, flexWrap: "wrap" }}>
-        {/* Cột Trái: Poster */}
-        <div style={{ position: "relative", width: 280, flexShrink: 0 }}>
-          <img src={poster} alt={detail.title} style={{ width: "100%", borderRadius: 14, objectFit: "cover", boxShadow: "0 10px 30px rgba(0,0,0,0.5)" }} />
+    <div style={{ minHeight: "100vh", position: "relative", overflow: "hidden" }}>
+      {/* Background Poster Blur khổng lồ */}
+      <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100vh", zIndex: 0 }}>
+        <img src={poster} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", filter: "blur(40px) brightness(0.3) saturate(1.5)", transform: "scale(1.1)" }} />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 0%, var(--bg) 100%)" }} />
+      </div>
 
-          {/* Nút Play đè lên Poster (Chỉ hiện khi có trailer) */}
+      <div className="fu" style={{ position: "relative", zIndex: 1, display: "flex", gap: 60, flexWrap: "wrap", padding: "140px 8vw 100px", maxWidth: 1400, margin: "0 auto" }}>
+
+        {/* Poster Cột Trái */}
+        <div style={{ position: "relative", width: 320, flexShrink: 0, perspective: 1000 }}>
+          <img src={poster} alt={detail.title} style={{ width: "100%", borderRadius: 20, objectFit: "cover", boxShadow: "0 30px 60px rgba(0,0,0,0.8)", border: "1px solid rgba(255,255,255,0.1)" }} />
           {hasTrailer && (
-            <div
-              onClick={() => setShowTrailer(true)}
-              style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.3)", borderRadius: 14, cursor: "pointer", transition: "all 0.3s" }}
-              onMouseEnter={e => e.currentTarget.style.background = "rgba(0,0,0,0.5)"}
-              onMouseLeave={e => e.currentTarget.style.background = "rgba(0,0,0,0.3)"}
-            >
-              <div style={{ width: 60, height: 60, borderRadius: "50%", background: "var(--gold)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 20px rgba(201,145,74,0.5)" }}>
-                <div style={{ width: 0, height: 0, borderTop: "12px solid transparent", borderBottom: "12px solid transparent", borderLeft: "20px solid #000", marginLeft: 6 }} />
+            <div onClick={() => setShowTrailer(true)} style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.4)", borderRadius: 20, cursor: "pointer", transition: "all 0.3s" }}>
+              <div style={{ width: 70, height: 70, borderRadius: "50%", background: "rgba(255,255,255,0.2)", backdropFilter: "blur(10px)", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(255,255,255,0.4)", transition: "transform 0.3s" }} onMouseEnter={e => e.currentTarget.style.transform = "scale(1.1)"} onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}>
+                <div style={{ width: 0, height: 0, borderTop: "14px solid transparent", borderBottom: "14px solid transparent", borderLeft: "22px solid #fff", marginLeft: 6 }} />
               </div>
             </div>
           )}
         </div>
 
-        {/* Cột Phải: Thông tin */}
-        <div style={{ flex: 1, minWidth: 300 }}>
-          <Badge>{detail.genre || "Đang cập nhật"}</Badge>
-          <h1 style={{ fontFamily: "var(--ff)", fontSize: 44, color: "var(--gold)", margin: "10px 0" }}>{detail.title}</h1>
+        {/* Nội dung Cột Phải */}
+        <div style={{ flex: 1, minWidth: 300, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+          <Badge color="var(--gold)">{detail.genre || "Đang cập nhật"}</Badge>
+          <h1 className="gold-text" style={{ fontFamily: "var(--ff)", fontSize: "clamp(40px, 5vw, 64px)", lineHeight: 1.1, margin: "16px 0 24px" }}>{detail.title}</h1>
 
-          <div style={{ display: "flex", gap: 16, color: "var(--txt2)", fontSize: 14, marginBottom: 20 }}>
+          <div style={{ display: "flex", gap: 24, color: "var(--txt)", fontSize: 16, marginBottom: 30, fontWeight: 500 }}>
             {detail.rating && <Stars v={detail.rating} />}
             {detail.duration && <span>⏱ {detail.duration}</span>}
             {detail.director && <span>🎬 {detail.director}</span>}
             {detail.year && <span>📅 {detail.year}</span>}
           </div>
 
-          <p style={{ color: "var(--txt2)", marginBottom: 30, lineHeight: 1.8 }}>{detail.description || "Đang cập nhật nội dung..."}</p>
+          <p style={{ color: "rgba(255,255,255,0.8)", marginBottom: 40, lineHeight: 1.9, fontSize: 16, maxWidth: 800 }}>{detail.description || "Đang cập nhật nội dung..."}</p>
 
-          <div style={{ background: "var(--bg2)", padding: "16px 20px", borderRadius: 12, border: "1px solid var(--brd)", maxWidth: 400, marginBottom: 24 }}>
-            <h3 style={{ fontFamily: "var(--ff)", fontSize: 18, marginBottom: 8 }}>Thông tin đặt vé</h3>
-            <p style={{ fontSize: 13, color: "var(--txt2)", lineHeight: 1.6, margin: 0 }}>
-              Giá vé thay đổi linh hoạt theo suất chiếu và loại ghế. Vui lòng chọn suất chiếu để xem giá chi tiết.
-            </p>
+          <div className="glass" style={{ padding: "24px", borderRadius: 16, maxWidth: 500, marginBottom: 32 }}>
+            <h3 style={{ fontFamily: "var(--ff)", fontSize: 20, marginBottom: 8, color: "var(--gold)" }}>🎟 Đặt vé trực tuyến</h3>
+            <p style={{ fontSize: 14, color: "var(--txt2)", margin: 0 }}>Hệ thống chọn ghế thông minh, giá vé linh hoạt theo vị trí và khung giờ chiếu.</p>
           </div>
 
-          <div style={{ display: "flex", gap: 12 }}>
-            <Btn size="lg" onClick={() => onBook(detail)}>🎬 Mua vé ngay</Btn>
-            {hasTrailer && (
-              <Btn size="lg" variant="ghost" onClick={() => setShowTrailer(true)}>▶ Xem Trailer</Btn>
-            )}
+          <div style={{ display: "flex", gap: 16 }}>
+            <Btn size="lg" onClick={() => onBook(detail)} style={{ borderRadius: 30, padding: "16px 40px", fontSize: 16, boxShadow: "0 10px 20px rgba(223, 166, 91, 0.3)" }}>Đặt vé ngay</Btn>
           </div>
         </div>
       </div>
 
-      {/* ───────────────────────────────────────────────────────── */}
-      {/* MODAL XEM TRAILER */}
-      {/* ───────────────────────────────────────────────────────── */}
+      {/* Modal Trailer giữ nguyên */}
       {showTrailer && hasTrailer && (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(5px)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "5vw" }}>
-
-          {/* Nút Đóng */}
-          <div
-            onClick={() => setShowTrailer(false)}
-            style={{ position: "absolute", top: 20, right: 30, color: "#fff", fontSize: 40, cursor: "pointer", opacity: 0.7, transition: "0.2s" }}
-            onMouseEnter={e => e.currentTarget.style.opacity = 1}
-            onMouseLeave={e => e.currentTarget.style.opacity = 0.7}
-          >
-            &times;
-          </div>
-
-          {/* Khung Video */}
-          <div className="fu" style={{ width: "100%", maxWidth: 1000, aspectRatio: "16/9", background: "#000", borderRadius: 12, overflow: "hidden", border: "1px solid var(--brd)", boxShadow: "0 20px 60px rgba(0,0,0,0.6)" }}>
-            <iframe
-              width="100%"
-              height="100%"
-              src={getEmbedUrl(detail.trailerUrl)}
-              title="YouTube video player"
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              style={{ border: "none" }}
-            ></iframe>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", backdropFilter: "blur(10px)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "5vw" }}>
+          <div onClick={() => setShowTrailer(false)} style={{ position: "absolute", top: 30, right: 40, color: "#fff", fontSize: 48, cursor: "pointer", transition: "0.2s" }}>&times;</div>
+          <div className="fu" style={{ width: "100%", maxWidth: 1100, aspectRatio: "16/9", background: "#000", borderRadius: 16, overflow: "hidden", boxShadow: "0 30px 100px rgba(0,0,0,0.8)" }}>
+            <iframe width="100%" height="100%" src={getEmbedUrl(detail.trailerUrl)} frameBorder="0" allow="autoplay; fullscreen" style={{ border: "none" }}></iframe>
           </div>
         </div>
       )}
@@ -459,7 +474,7 @@ function MovieDetailPage({ movie, onBook }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  BOOKING PAGE (Lấy giá động từ API basePrice)
+//  BOOKING PAGE (FIXED: 10 COLS, PROFESSIONAL UI)
 // ═══════════════════════════════════════════════════════════════
 function BookingPage({ movie, user, onConfirm, setPage }) {
   const dates = next3Days();
@@ -480,10 +495,11 @@ function BookingPage({ movie, user, onConfirm, setPage }) {
       .catch(console.error);
   }, [movie.id, selDate]);
 
-  // Fetch ghế
+  // Fetch ghế dựa trên 10 cột cố định
   useEffect(() => {
     if (selShowtime && selShowtime.room) {
-      let initialSeats = genSeats(selShowtime.room.capacity);
+      // Ép tạo 10 cột/hàng
+      let initialSeats = genSeats(80);
       apiGet(`/api/orders/showtime/${selShowtime.id}/booked-seats`)
         .then(bookedSeatIds => {
           const bookedArray = Array.isArray(bookedSeatIds) ? bookedSeatIds : [];
@@ -495,71 +511,68 @@ function BookingPage({ movie, user, onConfirm, setPage }) {
     }
   }, [selShowtime]);
 
-  // HÀM TÍNH GIÁ ĐỘNG DỰA TRÊN BASEPRICE CỦA API
   const getDynamicPrice = (seatType) => {
     if (!selShowtime) return 0;
     const base = selShowtime.basePrice || 0;
-    if (seatType === "couple") return base * 2;       // Ghế đôi tính tiền 2 vé
-    if (seatType === "vip") return base + 20000;      // Ghế VIP phụ thu 20k (bạn có thể tự điều chỉnh)
-    return base;                                      // Ghế thường
+    if (seatType === "couple") return base * 2;
+    if (seatType === "vip") return base + 20000;
+    return base;
   };
 
   const selected = seats.filter(s => s.selected);
   const totalAmount = selected.reduce((total, seat) => total + getDynamicPrice(seat.type), 0);
-
   const toggleSeat = (sid) => setSeats(ss => ss.map(s => s.id === sid && !s.taken ? { ...s, selected: !s.selected } : s));
 
   const handlePayment = async () => {
-    if (!user) { alert("Vui lòng đăng nhập!"); setPage("login"); return; }
+    if (!user) { toast.error("Vui lòng đăng nhập!"); setPage("login"); return; }
     setIsSubmitting(true);
     try {
-      // data lúc này chính là chuỗi mã vé (VD: "FE36F77C")
       const data = await apiPost("/api/orders/create", {
-        userId: user.id, showtimeId: selShowtime.id, seatNumbers: selected.map(s => s.id), payMethod
+        userId: user.id,
+        showtimeId: selShowtime.id,
+        seatNumbers: selected.map(s => s.id),
+        payMethod
       });
-
-      // SỬA Ở ĐÂY: Thay orderId: data.id thành orderId: data
+      // Gửi data (orderCode) sang trang xác nhận
       onConfirm({ movie, date: selDate, showtime: selShowtime, seats: selected, total: totalAmount, orderId: data, payMethod });
     } catch (error) {
-      alert("❌ Lỗi: Ghế có thể đã bị đặt hoặc hệ thống bận (" + error.message + ").");
-    } finally { setIsSubmitting(false); }
+      toast.error(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const steps = ["Chọn suất chiếu", "Chọn ghế", "Thanh toán"];
+  const steps = ["Suất chiếu", "Chọn ghế", "Thanh toán"];
   const durationText = movie.duration ? (String(movie.duration).includes("phút") ? movie.duration : `${movie.duration} phút`) : "120 phút";
 
   return (
-    <div style={{ paddingTop: 80, minHeight: "100vh", paddingBottom: 80 }}>
-      {/* HEADER TÓM TẮT PHIM */}
-      <div style={{ background: "linear-gradient(to bottom, rgba(8,8,16,0.9), var(--bg))", padding: "0 5vw 20px" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", gap: 16, alignItems: "center" }}>
-          <img src={movie.posterUrl || `https://picsum.photos/seed/bk${movie.id}/60/90`} alt="" style={{ width: 60, height: 90, borderRadius: 8, objectFit: "cover", boxShadow: "0 8px 24px rgba(0,0,0,0.5)" }} />
-          <div>
-            <h2 style={{ fontFamily: "var(--ff)", fontSize: 24, margin: 0, color: "var(--gold)" }}>{movie.title}</h2>
-            <div style={{ fontSize: 13, color: "var(--txt2)", marginTop: 4 }}>{movie.genre} • {durationText}</div>
-          </div>
+    <div style={{ paddingTop: 80, minHeight: "100vh", paddingBottom: 100 }}>
+      {/* HEADER PHIM GIỮ PHONG CÁCH KÍNH MỜ */}
+      <div className="glass" style={{ margin: "0 5vw 40px", padding: "20px 30px", borderRadius: 20, display: "flex", gap: 24, alignItems: "center" }}>
+        <img src={movie.posterUrl || `https://picsum.photos/seed/bk${movie.id}/80/120`} alt="" style={{ width: 64, height: 96, borderRadius: 12, objectFit: "cover", boxShadow: "0 8px 24px rgba(0,0,0,0.5)" }} />
+        <div>
+          <h2 style={{ fontFamily: "var(--ff)", fontSize: 32, margin: 0, color: "var(--gold)", fontStyle: "italic" }}>{movie.title}</h2>
+          <div style={{ fontSize: 14, color: "var(--txt2)", marginTop: 6, fontWeight: 500 }}>{movie.genre} • {durationText}</div>
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 32, padding: "20px 5vw", maxWidth: 1100, margin: "0 auto" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 40, padding: "0 5vw", maxWidth: 1400, margin: "0 auto" }}>
 
-        {/* CỘT TRÁI: NỘI DUNG CHÍNH */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 30 }}>
+        {/* CỘT TRÁI: FLOW CHÍNH */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
 
-          {/* THANH TIẾN TRÌNH */}
-          <div style={{ display: "flex", position: "relative", marginBottom: 10 }}>
+          {/* STEPPER CHUYÊN NGHIỆP */}
+          <div style={{ display: "flex", justifyContent: "space-between", position: "relative", marginBottom: 10, padding: "0 30px" }}>
+            <div style={{ position: "absolute", top: 18, left: 50, right: 50, height: 2, background: "var(--brd)", zIndex: 0 }} />
             {steps.map((label, idx) => {
               const isActive = step === idx + 1;
               const isPassed = step > idx + 1;
               return (
-                <div key={idx} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
-                  {idx < steps.length - 1 && (
-                    <div style={{ position: "absolute", top: 15, left: "50%", width: "100%", height: 2, background: isPassed ? "var(--gold)" : "var(--brd)", zIndex: 0 }} />
-                  )}
-                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: isActive || isPassed ? "var(--gold)" : "var(--bg2)", border: `2px solid ${isActive || isPassed ? "var(--gold)" : "var(--brd)"}`, color: isActive || isPassed ? "#080810" : "var(--txt2)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", fontSize: 14, zIndex: 1, position: "relative", transition: "0.3s" }}>
+                <div key={idx} style={{ display: "flex", flexDirection: "column", alignItems: "center", position: "relative", zIndex: 1 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: "50%", background: isActive || isPassed ? "var(--gold)" : "var(--bg3)", color: isActive || isPassed ? "#000" : "var(--txt2)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", fontSize: 14, transition: "0.3s", boxShadow: isActive ? "0 0 20px var(--gold-glow)" : "none" }}>
                     {isPassed ? "✓" : idx + 1}
                   </div>
-                  <span style={{ fontSize: 12, color: isActive ? "var(--gold)" : "var(--txt2)", fontWeight: isActive ? 600 : 400, marginTop: 8, whiteSpace: "nowrap" }}>{label}</span>
+                  <span style={{ fontSize: 12, color: isActive ? "var(--gold)" : "var(--txt2)", fontWeight: isActive ? 600 : 400, marginTop: 10, textTransform: "uppercase", letterSpacing: 1 }}>{label}</span>
                 </div>
               );
             })}
@@ -567,197 +580,184 @@ function BookingPage({ movie, user, onConfirm, setPage }) {
 
           {/* BƯỚC 1: CHỌN NGÀY & SUẤT */}
           {step === 1 && (
-            <div className="fu" style={{ background: "var(--bg2)", borderRadius: 16, border: "1px solid var(--brd)", padding: 24 }}>
-              <div style={{ fontSize: 13, color: "var(--txt2)", marginBottom: 12, fontWeight: 600, letterSpacing: 1, textTransform: "uppercase" }}>Chọn ngày chiếu</div>
-              <div style={{ display: "flex", gap: 12, marginBottom: 32, overflowX: "auto", paddingBottom: 8 }}>
+            <div className="fu">
+              <div style={{ fontSize: 13, color: "var(--txt2)", marginBottom: 16, fontWeight: 600, letterSpacing: 1, textTransform: "uppercase" }}>1. Chọn Ngày Chiếu</div>
+              <div style={{ display: "flex", gap: 14, marginBottom: 40, overflowX: "auto", paddingBottom: 10 }}>
                 {dates.map((d, idx) => {
+                  const isActive = selDate === d.val;
                   const [y, m, day] = d.val.split("-");
-                  const dateObj = new Date(y, m - 1, day);
-                  const topText = idx === 0 ? "Hôm nay" : idx === 1 ? "Ngày mai" : dateObj.toLocaleDateString("vi-VN", { weekday: "short" });
-                  const bottomText = `${day}/${m}`;
-
                   return (
-                    <div key={d.val} onClick={() => setSelDate(d.val)} style={{ padding: "12px 20px", borderRadius: 12, cursor: "pointer", background: selDate === d.val ? "rgba(201,145,74,0.15)" : "var(--bg)", border: `1px solid ${selDate === d.val ? "var(--gold)" : "var(--brd)"}`, color: selDate === d.val ? "var(--gold)" : "var(--txt)", textAlign: "center", minWidth: 100, transition: "all 0.2s", transform: selDate === d.val ? "translateY(-2px)" : "none" }}>
-                      <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 4, textTransform: "capitalize" }}>{topText}</div>
-                      <div style={{ fontSize: 16, fontWeight: "bold" }}>{bottomText}</div>
+                    <div key={d.val} onClick={() => setSelDate(d.val)} style={{ padding: "16px 24px", borderRadius: 16, cursor: "pointer", background: isActive ? "linear-gradient(135deg, var(--gold), #b87a32)" : "var(--bg2)", color: isActive ? "#000" : "var(--txt)", textAlign: "center", minWidth: 105, transition: "all 0.3s", border: isActive ? "none" : "1px solid var(--brd)", transform: isActive ? "translateY(-4px)" : "none", boxShadow: isActive ? "0 12px 24px rgba(223,166,91,0.2)" : "none" }}>
+                      <div style={{ fontSize: 11, opacity: isActive ? 0.8 : 0.5, marginBottom: 4, fontWeight: 600 }}>{idx === 0 ? "Hôm nay" : idx === 1 ? "Ngày mai" : "Thứ " + (new Date(y, m - 1, day).getDay() + 1)}</div>
+                      <div style={{ fontSize: 22, fontWeight: 800 }}>{day}/{m}</div>
                     </div>
                   );
                 })}
               </div>
 
-              <div style={{ fontSize: 13, color: "var(--txt2)", marginBottom: 12, fontWeight: 600, letterSpacing: 1, textTransform: "uppercase" }}>Suất chiếu có sẵn</div>
-              {showtimes.length === 0 ? <div style={{ color: "var(--dim)", fontStyle: "italic", padding: "20px 0" }}>Chưa có lịch chiếu cho ngày này.</div> : (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))", gap: 12 }}>
+              <div style={{ fontSize: 13, color: "var(--txt2)", marginBottom: 16, fontWeight: 600, letterSpacing: 1, textTransform: "uppercase" }}>2. Chọn Suất Chiếu</div>
+              {showtimes.length === 0 ? <div className="glass" style={{ padding: 40, borderRadius: 16, textAlign: "center", color: "var(--dim)" }}>Chưa có lịch chiếu cho ngày này.</div> : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 16 }}>
                   {showtimes.map(st => (
-                    <div key={st.id} onClick={() => setSelShowtime(st)} style={{ padding: "14px", borderRadius: 12, cursor: "pointer", background: selShowtime?.id === st.id ? "var(--gold)" : "var(--bg)", color: selShowtime?.id === st.id ? "#000" : "var(--txt)", border: `1px solid ${selShowtime?.id === st.id ? "var(--gold)" : "var(--brd)"}`, transition: "all 0.2s", textAlign: "center", boxShadow: selShowtime?.id === st.id ? "0 4px 12px rgba(201,145,74,0.3)" : "none" }}>
-                      <div style={{ fontFamily: "var(--ff)", fontSize: 22, fontWeight: "bold", lineHeight: 1 }}>{fmtTime(st.startTime)}</div>
-                      <div style={{ fontSize: 11, opacity: 0.7, marginTop: 6, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{st.room?.name || "Phòng chiếu"}</div>
+                    <div key={st.id} onClick={() => setSelShowtime(st)} style={{ padding: "18px", borderRadius: 16, cursor: "pointer", background: selShowtime?.id === st.id ? "rgba(223,166,91,0.12)" : "var(--bg2)", color: selShowtime?.id === st.id ? "var(--gold)" : "var(--txt)", border: `2px solid ${selShowtime?.id === st.id ? "var(--gold)" : "var(--brd)"}`, textAlign: "center", transition: "0.2s" }}>
+                      <div style={{ fontFamily: "var(--fb)", fontSize: 24, fontWeight: "bold" }}>{fmtTime(st.startTime)}</div>
+                      <div style={{ fontSize: 12, color: "var(--txt2)", marginTop: 6, fontWeight: 500 }}>{st.room?.name || "Rạp"}</div>
                     </div>
                   ))}
                 </div>
               )}
 
-              <div style={{ borderTop: "1px solid var(--brd)", marginTop: 32, paddingTop: 24, display: "flex", justifyContent: "flex-end" }}>
-                <Btn disabled={!selShowtime} onClick={() => setStep(2)}>Tiếp tục: Chọn ghế →</Btn>
+              <div style={{ marginTop: 48, display: "flex", justifyContent: "flex-end" }}>
+                <Btn size="lg" disabled={!selShowtime} onClick={() => setStep(2)} style={{ borderRadius: 30, padding: "16px 40px" }}>Tiếp tục: Chọn ghế →</Btn>
               </div>
             </div>
           )}
 
-          {/* BƯỚC 2: CHỌN GHẾ */}
+          {/* BƯỚC 2: CHỌN GHẾ (ÉP 10 CỘT) */}
           {step === 2 && (
-            <div className="fu" style={{ background: "var(--bg2)", borderRadius: 16, border: "1px solid var(--brd)", padding: "30px 20px" }}>
+            <div className="fu glass" style={{ borderRadius: 24, padding: "50px 30px" }}>
 
-              <div style={{ textAlign: "center", marginBottom: 50, position: "relative" }}>
-                <div style={{ position: "relative", width: "80%", height: 40, margin: "0 auto", borderTop: "4px solid var(--gold)", borderRadius: "50% 50% 0 0", filter: "drop-shadow(0 -5px 15px rgba(201,145,74,0.4))", background: "linear-gradient(to bottom, rgba(201,145,74,0.1), transparent)" }} />
-                <div style={{ position: "absolute", top: -20, left: "50%", transform: "translateX(-50%)", fontSize: 11, color: "var(--gold)", letterSpacing: 4, fontWeight: "bold" }}>MÀN HÌNH</div>
+              {/* Màn hình */}
+              <div style={{ textAlign: "center", marginBottom: 64, position: "relative" }}>
+                <div style={{ width: "85%", height: 6, margin: "0 auto", background: "var(--gold)", borderRadius: "50% 50% 0 0", boxShadow: "0 -8px 24px var(--gold-glow)" }} />
+                <div style={{ marginTop: 12, fontSize: 11, color: "var(--gold)", letterSpacing: 8, fontWeight: 700, textTransform: "uppercase" }}>Màn Hình</div>
               </div>
 
+              {/* Grid 10 Cột */}
               <div style={{ overflowX: "auto", paddingBottom: 20 }}>
                 {["A", "B", "C", "D", "E", "F", "G", "H"].map(row => {
                   const rowSeats = seats.filter(s => s.row === row);
                   if (rowSeats.length === 0) return null;
                   return (
-                    <div key={row} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, justifyContent: "center" }}>
-                      <span style={{ width: 20, fontSize: 12, color: "var(--txt2)", fontWeight: "bold", textAlign: "right", marginRight: 8 }}>{row}</span>
-                      <div style={{ display: "flex", gap: 6 }}>
+                    <div key={row} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, justifyContent: "center" }}>
+                      <span style={{ width: 24, fontSize: 13, color: "var(--dim)", fontWeight: 800, textAlign: "right" }}>{row}</span>
+                      <div style={{ display: "flex", gap: 8 }}>
                         {rowSeats.map((s, idx) => {
-                          let bgColor = s.type === "couple" ? "#7c3aed" : s.type === "vip" ? "#b91c1c" : "var(--bg3)";
-                          let borderColor = s.type === "couple" ? "#6d28d9" : s.type === "vip" ? "#991b1b" : "var(--brd)";
-                          let width = s.type === "couple" ? 56 : 28;
+                          let bgColor = s.type === "couple" ? "#7c3aed" : s.type === "vip" ? "#e63946" : "rgba(255,255,255,0.06)";
+                          let borderColor = s.type === "couple" ? "#6d28d9" : s.type === "vip" ? "#c1121f" : "var(--brd)";
+                          let width = s.type === "couple" ? 68 : 34;
 
-                          if (s.taken) { bgColor = "#1f1f28"; borderColor = "transparent"; }
-                          if (s.selected) { bgColor = "var(--gold)"; borderColor = "#fff"; }
+                          if (s.taken) { bgColor = "#161625"; borderColor = "transparent"; }
+                          if (s.selected) { bgColor = "var(--gold)"; borderColor = "var(--gold)"; }
 
-                          let marginLeft = idx === Math.floor(rowSeats.length / 2) ? 20 : 0;
+                          // Lối đi ở giữa sau cột 5
+                          let marginLeft = (s.type !== "couple" && idx === 5) ? 32 : 0;
+                          if (s.type === "couple" && idx === 3) marginLeft = 32;
 
                           return (
-                            <div
-                              key={s.id}
-                              onClick={() => toggleSeat(s.id)}
-                              title={`${s.id} - ${fmt(getDynamicPrice(s.type))}`} // Hover để xem giá từng ghế
-                              style={{ width, height: 28, marginLeft, borderRadius: "6px 6px 2px 2px", background: bgColor, border: `1px solid ${borderColor}`, cursor: s.taken ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: s.selected ? "#000" : (s.taken ? "rgba(255,255,255,0.2)" : "#fff"), opacity: s.taken ? 0.6 : 1, transition: "all 0.2s", fontWeight: "bold", boxShadow: s.selected ? "0 0 10px rgba(201,145,74,0.6)" : "inset 0 -4px 0 rgba(0,0,0,0.2)", transform: s.selected ? "scale(1.1)" : "scale(1)" }}>
+                            <div key={s.id} onClick={() => toggleSeat(s.id)}
+                              style={{ width, height: 34, marginLeft, borderRadius: "8px 8px 3px 3px", background: bgColor, border: `1px solid ${borderColor}`, cursor: s.taken ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: s.selected ? "#000" : (s.taken ? "rgba(255,255,255,0.15)" : "var(--txt)"), transition: "all 0.2s", fontWeight: 800, boxShadow: s.selected ? "0 4px 15px var(--gold-glow)" : "inset 0 -4px 0 rgba(0,0,0,0.2)", transform: s.selected ? "scale(1.18) translateY(-4px)" : "scale(1)" }}>
                               {s.num}
                             </div>
                           );
                         })}
                       </div>
-                      <span style={{ width: 20, fontSize: 12, color: "var(--txt2)", fontWeight: "bold", textAlign: "left", marginLeft: 8 }}>{row}</span>
+                      <span style={{ width: 24, fontSize: 13, color: "var(--dim)", fontWeight: 800, textAlign: "left" }}>{row}</span>
                     </div>
                   );
                 })}
               </div>
 
-              <div style={{ display: "flex", justifyContent: "center", gap: 20, flexWrap: "wrap", marginTop: 20, paddingTop: 20, borderTop: "1px solid var(--brd)" }}>
-                {[{ label: "Đã bán", color: "#1f1f28" }, { label: "Thường", color: "var(--bg3)", brd: "var(--brd)" }, { label: "VIP", color: "#b91c1c" }, { label: "Cặp đôi", color: "#7c3aed" }].map(lg => (
-                  <div key={lg.label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--txt2)" }}>
-                    <div style={{ width: 16, height: 16, borderRadius: 4, background: lg.color, border: `1px solid ${lg.brd || lg.color}` }} />
+              {/* Chú thích */}
+              <div style={{ display: "flex", justifyContent: "center", gap: 28, flexWrap: "wrap", marginTop: 48, paddingTop: 32, borderTop: "1px solid var(--brd)" }}>
+                {[{ label: "Đã bán", color: "#161625" }, { label: "Thường", color: "rgba(255,255,255,0.06)" }, { label: "VIP", color: "#e63946" }, { label: "Cặp đôi", color: "#7c3aed" }, { label: "Đang chọn", color: "var(--gold)" }].map(lg => (
+                  <div key={lg.label} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "var(--txt2)", fontWeight: 500 }}>
+                    <div style={{ width: 18, height: 18, borderRadius: 5, background: lg.color, border: `1px solid ${lg.color}` }} />
                     {lg.label}
                   </div>
                 ))}
               </div>
 
-              <div style={{ display: "flex", gap: 12, marginTop: 32, justifyContent: "space-between" }}>
-                <Btn variant="ghost" onClick={() => setStep(1)}>← Đổi suất chiếu</Btn>
-                <Btn disabled={selected.length === 0} onClick={() => setStep(3)}>Tiếp tục ({selected.length} ghế) →</Btn>
+              <div style={{ display: "flex", gap: 12, marginTop: 48, justifyContent: "space-between" }}>
+                <Btn variant="ghost" onClick={() => setStep(1)} style={{ borderRadius: 30 }}>← Suất chiếu</Btn>
+                <Btn size="lg" disabled={selected.length === 0} onClick={() => setStep(3)} style={{ borderRadius: 30, padding: "16px 40px" }}>Thanh toán ({selected.length} ghế) →</Btn>
               </div>
             </div>
           )}
 
           {/* BƯỚC 3: THANH TOÁN */}
           {step === 3 && (
-            <div className="fu" style={{ background: "var(--bg2)", borderRadius: 16, border: "1px solid var(--brd)", padding: 24 }}>
-              <div style={{ fontSize: 13, color: "var(--txt2)", marginBottom: 16, fontWeight: 600, letterSpacing: 1, textTransform: "uppercase" }}>Phương thức thanh toán</div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 30 }}>
+            <div className="fu glass" style={{ borderRadius: 24, padding: 32 }}>
+              <div style={{ fontSize: 13, color: "var(--txt2)", marginBottom: 20, fontWeight: 600, letterSpacing: 1, textTransform: "uppercase" }}>Chọn Phương Thức</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 32 }}>
                 {[
                   { id: "momo", name: "Ví MoMo", color: "#a50064", icon: "👛" },
                   { id: "vnpay", name: "VNPay", color: "#005baa", icon: "🏦" },
                   { id: "zalopay", name: "ZaloPay", color: "#0068ff", icon: "💬" },
                   { id: "cash", name: "Tại quầy", color: "var(--aqua)", icon: "🎟️" }
                 ].map(pm => (
-                  <div key={pm.id} onClick={() => setPayMethod(pm.id)} style={{ padding: "16px", borderRadius: 12, cursor: "pointer", background: payMethod === pm.id ? `${pm.color}15` : "var(--bg)", border: `2px solid ${payMethod === pm.id ? pm.color : "var(--brd)"}`, display: "flex", alignItems: "center", gap: 12, transition: "0.2s" }}>
-                    <div style={{ fontSize: 24 }}>{pm.icon}</div>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{pm.name}</div>
-                    {payMethod === pm.id && <div style={{ marginLeft: "auto", color: pm.color, fontWeight: "bold" }}>✓</div>}
+                  <div key={pm.id} onClick={() => setPayMethod(pm.id)} style={{ padding: "22px", borderRadius: 18, cursor: "pointer", background: payMethod === pm.id ? `${pm.color}15` : "var(--bg3)", border: `2px solid ${payMethod === pm.id ? pm.color : "transparent"}`, display: "flex", alignItems: "center", gap: 14, transition: "0.2s" }}>
+                    <div style={{ fontSize: 32 }}>{pm.icon}</div>
+                    <div style={{ fontWeight: 700, fontSize: 16 }}>{pm.name}</div>
+                    {payMethod === pm.id && <div style={{ marginLeft: "auto", color: pm.color, fontSize: 24 }}>✓</div>}
                   </div>
                 ))}
               </div>
 
-              <div style={{ background: "rgba(201,145,74,.05)", border: "1px dashed rgba(201,145,74,.3)", borderRadius: 8, padding: "12px 16px", marginBottom: 24, fontSize: 13, color: "var(--txt2)", display: "flex", gap: 10 }}>
-                <span style={{ color: "var(--gold)" }}>ⓘ</span> Vé đã mua không thể hoàn hoặc đổi trả. Vui lòng kiểm tra lại thông tin ghế ngồi.
+              <div style={{ background: "rgba(223,166,91,0.05)", border: "1px dashed rgba(223,166,91,0.25)", borderRadius: 12, padding: "16px 20px", marginBottom: 40, fontSize: 14, color: "var(--txt2)", lineHeight: 1.6 }}>
+                <span style={{ color: "var(--gold)", fontWeight: 700 }}>Lưu ý:</span> Vé đã đặt thành công không thể thay đổi thông tin hoặc hoàn tiền. Vui lòng kiểm tra kỹ suất chiếu và số ghế.
               </div>
 
               <div style={{ display: "flex", gap: 12, justifyContent: "space-between" }}>
-                <Btn variant="ghost" onClick={() => setStep(2)}>← Chọn lại ghế</Btn>
-                <Btn size="lg" onClick={handlePayment} disabled={isSubmitting}>
-                  {isSubmitting ? "Đang xử lý..." : `Thanh toán ${fmt(totalAmount)}`}
+                <Btn variant="ghost" onClick={() => setStep(2)} style={{ borderRadius: 30 }}>← Chọn lại ghế</Btn>
+                <Btn size="lg" onClick={handlePayment} disabled={isSubmitting} style={{ borderRadius: 30, padding: "18px 50px", fontSize: 17 }}>
+                  {isSubmitting ? "Đang xử lý..." : `Xác nhận ${fmt(totalAmount)}`}
                 </Btn>
               </div>
             </div>
           )}
         </div>
 
-        {/* CỘT PHẢI: TICKET SIDEBAR */}
+        {/* CỘT PHẢI: TICKET SIDEBAR (PREMIUM TICKET DESIGN) */}
         <div>
-          <div style={{ position: "sticky", top: 80, background: "var(--bg2)", borderRadius: 16, border: "1px solid var(--brd)", filter: "drop-shadow(0 10px 30px rgba(0,0,0,0.5))", overflow: "hidden" }}>
+          <div style={{ position: "sticky", top: 100 }}>
+            <div style={{ background: "var(--bg3)", borderRadius: 24, border: "1px solid var(--brd)", boxShadow: "0 24px 48px rgba(0,0,0,0.5)", overflow: "hidden" }}>
 
-            {/* Header Ticket */}
-            <div style={{ padding: "20px 20px 16px", borderBottom: "2px dashed var(--brd)", position: "relative", background: "linear-gradient(135deg, rgba(201,145,74,0.1), transparent)" }}>
-              <div style={{ position: "absolute", bottom: -10, left: -10, width: 20, height: 20, borderRadius: "50%", background: "var(--bg)", border: "1px solid var(--brd)" }} />
-              <div style={{ position: "absolute", bottom: -10, right: -10, width: 20, height: 20, borderRadius: "50%", background: "var(--bg)", border: "1px solid var(--brd)" }} />
+              {/* Top Phần vé */}
+              <div style={{ padding: 28, borderBottom: "2px dashed var(--dim)", position: "relative" }}>
+                <div style={{ position: "absolute", bottom: -12, left: -12, width: 24, height: 24, borderRadius: "50%", background: "var(--bg)" }} />
+                <div style={{ position: "absolute", bottom: -12, right: -12, width: 24, height: 24, borderRadius: "50%", background: "var(--bg)" }} />
 
-              <div style={{ fontSize: 11, color: "var(--txt2)", textTransform: "uppercase", letterSpacing: 2, marginBottom: 6 }}>Tóm tắt đơn hàng</div>
-              <h3 style={{ fontFamily: "var(--ff)", fontSize: 22, margin: 0, color: "#fff", lineHeight: 1.2 }}>{movie.title}</h3>
-            </div>
+                <div style={{ fontSize: 11, color: "var(--gold)", textTransform: "uppercase", letterSpacing: 3, marginBottom: 10, textAlign: "center", fontWeight: 700 }}>CinéHub Ticket</div>
+                <h3 style={{ fontFamily: "var(--ff)", fontSize: 30, margin: "0 0 24px", color: "#fff", lineHeight: 1.1, textAlign: "center", fontStyle: "italic" }}>{movie.title}</h3>
 
-            {/* Body Ticket */}
-            <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-                <span style={{ color: "var(--txt2)" }}>Rạp chiếu</span>
-                <span style={{ fontWeight: 600 }}>CinéHub Center</span>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-                <span style={{ color: "var(--txt2)" }}>Suất chiếu</span>
-                {selShowtime ? (
-                  <span style={{ color: "var(--gold)", fontWeight: "bold", textAlign: "right" }}>
-                    {fmtTime(selShowtime.startTime)}<br />
-                    <span style={{ color: "var(--txt)", fontWeight: 400, fontSize: 12 }}>{selDate} ({selShowtime.room?.name})</span>
-                  </span>
-                ) : <span style={{ color: "var(--dim)" }}>Chưa chọn</span>}
-              </div>
-
-              {selected.length > 0 && (
-                <>
-                  <div style={{ width: "100%", height: 1, background: "var(--brd)", margin: "4px 0" }} />
-                  <div style={{ fontSize: 13 }}>
-                    <div style={{ color: "var(--txt2)", marginBottom: 8 }}>Ghế đã chọn ({selected.length})</div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                      {selected.map(s => (
-                        <Badge key={s.id} color={s.type === 'couple' ? '#7c3aed' : s.type === 'vip' ? '#b91c1c' : 'var(--gold)'}>
-                          {s.id}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Footer Ticket */}
-            <div style={{ background: "rgba(0,0,0,0.2)", padding: 20, borderTop: "2px dashed var(--brd)", position: "relative" }}>
-              <div style={{ position: "absolute", top: -10, left: -10, width: 20, height: 20, borderRadius: "50%", background: "var(--bg)", border: "1px solid var(--brd)" }} />
-              <div style={{ position: "absolute", top: -10, right: -10, width: 20, height: 20, borderRadius: "50%", background: "var(--bg)", border: "1px solid var(--brd)" }} />
-
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-                <span style={{ color: "var(--txt2)", fontSize: 13 }}>Tổng thanh toán</span>
-                <span style={{ fontFamily: "var(--ff)", fontSize: 28, fontWeight: 700, color: "var(--gold)", lineHeight: 1 }}>{fmt(totalAmount)}</span>
-              </div>
-              {step === 3 && (
-                <div style={{ marginTop: 12, textAlign: "right", fontSize: 11, color: "var(--dim)", textTransform: "uppercase" }}>
-                  Qua: {payMethod.toUpperCase()}
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 14 }}>
+                  <span style={{ color: "var(--txt2)" }}>Phòng chiếu</span>
+                  <span style={{ fontWeight: 700 }}>{selShowtime?.room?.name || "Ciné Center"}</span>
                 </div>
-              )}
+
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
+                  <span style={{ color: "var(--txt2)" }}>Suất chiếu</span>
+                  {selShowtime ? (
+                    <span style={{ textAlign: "right" }}>
+                      <span style={{ color: "var(--gold)", fontWeight: 800, fontSize: 18 }}>{fmtTime(selShowtime.startTime)}</span><br />
+                      <span style={{ color: "var(--txt2)", fontSize: 13 }}>{selDate}</span>
+                    </span>
+                  ) : <span style={{ color: "var(--dim)" }}>Chưa chọn</span>}
+                </div>
+              </div>
+
+              {/* Bottom Phần vé */}
+              <div style={{ padding: 28 }}>
+                <div style={{ fontSize: 12, color: "var(--txt2)", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>Vị trí ghế ({selected.length})</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, minHeight: 44 }}>
+                  {selected.length === 0 && <span style={{ color: "var(--dim)", fontStyle: "italic", fontSize: 14 }}>Vui lòng chọn ghế...</span>}
+                  {selected.map(s => (
+                    <Badge key={s.id} color={s.type === 'couple' ? '#7c3aed' : s.type === 'vip' ? '#e63946' : 'var(--gold)'}>{s.id}</Badge>
+                  ))}
+                </div>
+
+                <div style={{ marginTop: 40, paddingTop: 24, borderTop: "1px solid var(--brd)", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                  <span style={{ color: "var(--txt2)", fontSize: 15, fontWeight: 500 }}>Thành tiền</span>
+                  <span style={{ fontFamily: "var(--fb)", fontSize: 34, fontWeight: 800, color: "var(--gold)", lineHeight: 1 }}>{fmt(totalAmount)}</span>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Trang trí chân vé */}
+            <div style={{ textAlign: "center", marginTop: 20, fontSize: 12, color: "var(--dim)", textTransform: "uppercase", letterSpacing: 2 }}>
+              Enjoy Your Movie Time
             </div>
           </div>
         </div>
@@ -934,7 +934,7 @@ function TicketScannerPage() {
 
   const handleCheckIn = async () => {
     // Logic xác nhận vé vào rạp
-    alert(`✅ Đã xác nhận vé cho khách hàng: ${order.userName}`);
+    toast.success(`Đã xác nhận vé cho khách hàng: ${order.userName}`);
     setOrder(null); // Reset màn hình chờ quét khách tiếp theo
     inputRef.current?.focus();
   };
@@ -1126,7 +1126,7 @@ function SearchPage({ onSelect }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  ADMIN — CRUD phim/phòng/suất chiếu
+//  ADMIN — CRUD PHIM/PHÒNG/SUẤT CHIẾU (CÓ TÍNH NĂNG CHỈNH SỬA)
 // ═══════════════════════════════════════════════════════════════
 function AdminPage() {
   const [tab, setTab] = useState("movies");
@@ -1135,38 +1135,40 @@ function AdminPage() {
   const [showtimes, setShowtimes] = useState([]);
   const [saving, setSaving] = useState(false);
 
+  // States lưu trữ item đang được chỉnh sửa
+  const [editingMovie, setEditingMovie] = useState(null);
+  const [editingRoom, setEditingRoom] = useState(null);
+  const [editingShowtime, setEditingShowtime] = useState(null);
+
   const fetchAll = useCallback(() => {
-    apiGet("/api/movies").then(d => setMovies(Array.isArray(d) ? d : [])).catch(() => { });
-    // GET /api/rooms → Page<Room>
-    apiGet("/api/rooms").then(d => setRooms(d.content || (Array.isArray(d) ? d : []))).catch(() => { });
-    // GET /api/showtimes/filter?page=0&size=20 (sau khi fix — KHÔNG dùng sort param tùy ý)
-    apiGet("/api/showtimes/filter?page=0&size=20").then(d => setShowtimes(d.content || [])).catch(() => { });
+    apiGet("/api/movies").then(d => setMovies(Array.isArray(d) ? d : [])).catch(() => {});
+    apiGet("/api/rooms").then(d => setRooms(d.content || (Array.isArray(d) ? d : []))).catch(() => {});
+    apiGet("/api/showtimes/filter?page=0&size=50").then(d => setShowtimes(d.content || [])).catch(() => {});
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const inpSt = { width: "100%", padding: "10px 13px", borderRadius: 7, background: "var(--bg3)", border: "1px solid var(--brd)", color: "var(--txt)", fontSize: 14, outline: "none", marginBottom: 12 };
+  const changeTab = (k) => {
+    setTab(k);
+    setEditingMovie(null); setEditingRoom(null); setEditingShowtime(null); // Reset form khi chuyển tab
+  };
 
-  // POST /api/movies/create  multipart: movie(JSON) + file
+  const inpSt = { width: "100%", padding: "10px 13px", borderRadius: 8, background: "var(--bg3)", border: "1px solid var(--brd)", color: "var(--txt)", fontSize: 14, outline: "none", marginBottom: 12, transition: "0.2s" };
+
+  // Xử lý Phim (Tạo mới HOẶC Cập nhật)
   const handleMovie = async e => {
     e.preventDefault(); setSaving(true);
     const fd = new FormData(e.target);
 
-    // Lấy thông tin trailer (nếu có nhập)
     const trailerTitle = fd.get("trailerTitle");
     const trailerUrl = fd.get("trailerUrl");
-    const trailers = trailerUrl ? [{ title: trailerTitle || "Official Trailer", videoUrl: trailerUrl }] : [];
+    const trailers = trailerUrl ? [{ title: trailerTitle || "Trailer", videoUrl: trailerUrl }] : [];
 
     const movieJson = {
-      title: fd.get("title"),
-      genre: fd.get("genre"),
-      releaseYear: fd.get("releaseYear"),
-      director: fd.get("director"),
-      duration: fd.get("duration"),
-      description: fd.get("description"),
-      status: "showing",
-      rating: 8.0,
-      trailers: trailers // Truyền list trailer xuống BE
+      title: fd.get("title"), genre: fd.get("genre"), releaseYear: fd.get("releaseYear"),
+      director: fd.get("director"), duration: fd.get("duration"), description: fd.get("description"),
+      status: "showing", rating: editingMovie ? editingMovie.rating : 8.0, 
+      trailers: trailers, endDate: fd.get("endDate")
     };
 
     const body = new FormData();
@@ -1174,130 +1176,187 @@ function AdminPage() {
     if (fd.get("file")?.size > 0) body.append("file", fd.get("file"));
 
     try {
-      await apiPostForm("/api/movies/create", body);
-      alert("✅ Tạo phim thành công!");
-      e.target.reset();
-      fetchAll();
-    } catch (err) {
-      alert("❌ Lỗi: " + err.message);
-    }
+      if (editingMovie) {
+        await apiPutForm(`/api/movies/${editingMovie.id}`, body);
+        toast.success("Cập nhật phim thành công!");
+      } else {
+        await apiPostForm("/api/movies/create", body);
+        toast.success("Tạo phim thành công!");
+      }
+      e.target.reset(); setEditingMovie(null); fetchAll();
+    } catch (err) { toast.error(err.message); }
     setSaving(false);
   };
 
-  // POST /api/rooms/create  {name, capacity}
+  // Xử lý Phòng chiếu (Tạo mới HOẶC Cập nhật)
   const handleRoom = async e => {
     e.preventDefault(); setSaving(true);
     const fd = new FormData(e.target);
-    try { await apiPost("/api/rooms/create", { name: fd.get("name"), capacity: parseInt(fd.get("capacity")) }); alert("✅ Tạo phòng thành công!"); e.target.reset(); fetchAll(); }
-    catch (err) { alert("❌ Lỗi: " + err.message); }
+    const payload = { name: fd.get("name"), capacity: parseInt(fd.get("capacity")) };
+    try { 
+      if (editingRoom) {
+        await apiPut(`/api/rooms/${editingRoom.id}`, payload);
+        toast.success("Cập nhật phòng thành công!");
+      } else {
+        await apiPost("/api/rooms/create", payload); 
+        toast.success("Tạo phòng thành công!");
+      }
+      e.target.reset(); setEditingRoom(null); fetchAll(); 
+    }
+    catch (err) { toast.error(err.message); }
     setSaving(false);
   };
 
-  // POST /api/showtimes/create  {movieId, roomId, showDate:"YYYY-MM-DD", startTime:"HH:MM:SS", basePrice}
+  // Xử lý Suất chiếu (Tạo mới HOẶC Cập nhật)
   const handleShowtime = async e => {
     e.preventDefault(); setSaving(true);
     const fd = new FormData(e.target);
-    const raw = fd.get("startTime"); // "2024-12-25T09:00"
-    const showDate = raw.split("T")[0];          // "2024-12-25"
-    const startTime = raw.split("T")[1] + ":00"; // "09:00:00"
+    const raw = fd.get("startTime"); 
+    const showDate = raw.split("T")[0];          
+    const startTime = raw.split("T")[1] + ":00"; 
+    
+    const payload = { movieId: parseInt(fd.get("movieId")), roomId: parseInt(fd.get("roomId")), showDate, startTime, basePrice: parseFloat(fd.get("basePrice")) };
+    
     try {
-      await apiPost("/api/showtimes/create", { movieId: parseInt(fd.get("movieId")), roomId: parseInt(fd.get("roomId")), showDate, startTime, basePrice: parseFloat(fd.get("basePrice")) });
-      alert("✅ Tạo suất chiếu thành công!"); e.target.reset(); fetchAll();
-    } catch (err) { alert("❌ Lỗi: " + err.message); }
+      if (editingShowtime) {
+        await apiPut(`/api/showtimes/${editingShowtime.id}`, payload);
+        toast.success("Cập nhật suất chiếu thành công!");
+      } else {
+        await apiPost("/api/showtimes/create", payload);
+        toast.success("Tạo suất chiếu thành công!"); 
+      }
+      e.target.reset(); setEditingShowtime(null); fetchAll();
+    } catch (err) { toast.error(err.message); }
     setSaving(false);
+  };
+
+  // Hàm helper ghép ngày giờ cho thẻ input type="datetime-local"
+  const formatDateTimeLocal = (dateArr, timeArr) => {
+    if(!dateArr || !timeArr) return "";
+    let d = Array.isArray(dateArr) ? `${dateArr[0]}-${String(dateArr[1]).padStart(2,'0')}-${String(dateArr[2]).padStart(2,'0')}` : dateArr;
+    let t = Array.isArray(timeArr) ? `${String(timeArr[0]).padStart(2,'0')}:${String(timeArr[1]).padStart(2,'0')}` : timeArr.substring(0,5);
+    return `${d}T${t}`;
   };
 
   return (
     <div style={{ paddingTop: 60, minHeight: "100vh", padding: "90px 5vw 60px" }}>
       <h1 style={{ fontFamily: "var(--ff)", fontStyle: "italic", fontSize: 32, fontWeight: 300, color: "var(--gold)", marginBottom: 22 }}>Quản trị hệ thống</h1>
+      
       <div style={{ display: "flex", gap: 8, marginBottom: 26 }}>
         {[["movies", "🎬 Phim"], ["rooms", "🏛 Phòng chiếu"], ["showtimes", "🕘 Suất chiếu"]].map(([k, l]) => (
-          <Btn key={k} variant={tab === k ? "primary" : "ghost"} onClick={() => setTab(k)}>{l}</Btn>
+          <Btn key={k} variant={tab === k ? "primary" : "ghost"} onClick={() => changeTab(k)}>{l}</Btn>
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "340px 1fr", gap: 22 }}>
-        {/* Form */}
-        <Card style={{ padding: 22 }}>
-          <h3 style={{ fontFamily: "var(--ff)", fontStyle: "italic", fontSize: 18, marginBottom: 18 }}>Thêm {tab === "movies" ? "Phim" : tab === "rooms" ? "Phòng" : "Suất chiếu"}</h3>
+      <div style={{ display: "grid", gridTemplateColumns: "360px 1fr", gap: 24, alignItems: "start" }}>
+        
+        {/* KHU VỰC FORM (TRÁI) */}
+        <Card className="fu" style={{ padding: 24, position: "sticky", top: 80 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+            <h3 style={{ fontFamily: "var(--ff)", fontStyle: "italic", fontSize: 20, color: "var(--gold)", margin: 0 }}>
+              {tab === "movies" ? (editingMovie ? "Sửa Phim" : "Thêm Phim Mới") : 
+               tab === "rooms" ? (editingRoom ? "Sửa Phòng" : "Thêm Phòng Mới") : 
+               (editingShowtime ? "Sửa Suất Chiếu" : "Thêm Suất Chiếu Mới")}
+            </h3>
+            {/* Nút Hủy Sửa */}
+            {(editingMovie || editingRoom || editingShowtime) && (
+              <Badge color="var(--red)">
+                <span style={{cursor: "pointer"}} onClick={() => { setEditingMovie(null); setEditingRoom(null); setEditingShowtime(null); }}>✕ Hủy sửa</span>
+              </Badge>
+            )}
+          </div>
 
+          {/* Dùng thủ thuật key={id} để React tự động reset form defaultValue khi thay đổi item đang sửa */}
           {tab === "movies" && (
-            <form onSubmit={handleMovie}>
-              <input name="title" placeholder="Tên phim *" style={inpSt} required onFocus={e => e.target.style.borderColor = "var(--gold)"} onBlur={e => e.target.style.borderColor = "var(--brd)"} />
-              <input name="genre" placeholder="Thể loại *" style={inpSt} required onFocus={e => e.target.style.borderColor = "var(--gold)"} onBlur={e => e.target.style.borderColor = "var(--brd)"} />
-              <input name="releaseYear" placeholder="Năm (VD: 2024) *" style={inpSt} required onFocus={e => e.target.style.borderColor = "var(--gold)"} onBlur={e => e.target.style.borderColor = "var(--brd)"} />
-              <input name="director" placeholder="Đạo diễn *" style={inpSt} required onFocus={e => e.target.style.borderColor = "var(--gold)"} onBlur={e => e.target.style.borderColor = "var(--brd)"} />
-              <input name="duration" placeholder="Thời lượng (VD: 120 phút) *" style={inpSt} required onFocus={e => e.target.style.borderColor = "var(--gold)"} onBlur={e => e.target.style.borderColor = "var(--brd)"} />
-              <textarea name="description" placeholder="Mô tả nội dung..." rows={3} style={{ ...inpSt, resize: "vertical" }} required onFocus={e => e.target.style.borderColor = "var(--gold)"} onBlur={e => e.target.style.borderColor = "var(--brd)"} />
-
-              <div style={{ padding: "12px", background: "rgba(255,255,255,0.02)", borderRadius: 8, border: "1px solid var(--brd)", marginBottom: 12 }}>
-                <label style={{ fontSize: 11, color: "var(--gold)", display: "block", marginBottom: 8, fontWeight: "bold" }}>THÊM TRAILER (TÙY CHỌN)</label>
-                <input name="trailerTitle" placeholder="Tên Trailer (VD: Official Trailer)" style={{ ...inpSt, marginBottom: 8 }} onFocus={e => e.target.style.borderColor = "var(--gold)"} onBlur={e => e.target.style.borderColor = "var(--brd)"} />
-                <input name="trailerUrl" placeholder="Link Video (Youtube/URL)" style={{ ...inpSt, marginBottom: 0 }} onFocus={e => e.target.style.borderColor = "var(--gold)"} onBlur={e => e.target.style.borderColor = "var(--brd)"} />
+            <form key={editingMovie ? editingMovie.id : "new"} onSubmit={handleMovie}>
+              <input name="title" defaultValue={editingMovie?.title} placeholder="Tên phim *" style={inpSt} required />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                 <input name="genre" defaultValue={editingMovie?.genre} placeholder="Thể loại *" style={inpSt} required />
+                 <input name="releaseYear" defaultValue={editingMovie?.releaseYear || editingMovie?.year} placeholder="Năm (VD: 2024) *" style={inpSt} required />
+                 <input name="director" defaultValue={editingMovie?.director} placeholder="Đạo diễn *" style={inpSt} required />
+                 <input name="duration" defaultValue={editingMovie?.duration} placeholder="Thời lượng *" style={inpSt} required />
               </div>
-
-              <label style={{ fontSize: 11, color: "var(--txt2)", display: "block", marginBottom: 5 }}>Ảnh poster</label>
+              <label style={{ fontSize: 11, color: "var(--txt2)", display: "block", marginBottom: 5 }}>Ngày kết thúc chiếu *</label>
+              <input name="endDate" defaultValue={editingMovie?.endDate} type="date" style={inpSt} required />
+              <textarea name="description" defaultValue={editingMovie?.description} placeholder="Mô tả nội dung..." rows={4} style={{ ...inpSt, resize: "vertical" }} required />
+              
+              <div style={{ padding: "12px", background: "rgba(255,255,255,0.02)", borderRadius: 8, border: "1px dashed var(--brd)", marginBottom: 12 }}>
+                <label style={{ fontSize: 11, color: "var(--gold)", display: "block", marginBottom: 8, fontWeight: "bold" }}>TRAILER (TÙY CHỌN)</label>
+                <input name="trailerTitle" defaultValue={editingMovie?.trailers?.[0]?.title} placeholder="Tên Trailer" style={{ ...inpSt, marginBottom: 8 }} />
+                <input name="trailerUrl" defaultValue={editingMovie?.trailers?.[0]?.videoUrl} placeholder="Link Youtube" style={{ ...inpSt, marginBottom: 0 }} />
+              </div>
+              
+              <label style={{ fontSize: 11, color: "var(--txt2)", display: "block", marginBottom: 5 }}>Ảnh poster (Bỏ trống nếu không đổi)</label>
               <input name="file" type="file" accept="image/*" style={{ ...inpSt, padding: "6px" }} />
-
-              <Btn full disabled={saving} style={{ marginTop: 4 }}>{saving ? <><span className="spin">⟳</span> Đang lưu...</> : "Lưu phim"}</Btn>
+              <Btn full disabled={saving} style={{ marginTop: 8 }}>{saving ? <><span className="spin">⟳</span> Đang lưu...</> : (editingMovie ? "Cập nhật Phim" : "Lưu Phim")}</Btn>
             </form>
           )}
 
           {tab === "rooms" && (
-            <form onSubmit={handleRoom}>
-              <input name="name" placeholder="Tên phòng *" style={inpSt} required onFocus={e => e.target.style.borderColor = "var(--gold)"} onBlur={e => e.target.style.borderColor = "var(--brd)"} />
-              <input name="capacity" type="number" min={1} placeholder="Sức chứa (số ghế) *" style={inpSt} required onFocus={e => e.target.style.borderColor = "var(--gold)"} onBlur={e => e.target.style.borderColor = "var(--brd)"} />
-              <Btn full disabled={saving}>{saving ? <><span className="spin">⟳</span> Đang lưu...</> : "Lưu phòng"}</Btn>
+            <form key={editingRoom ? editingRoom.id : "new"} onSubmit={handleRoom}>
+              <input name="name" defaultValue={editingRoom?.name} placeholder="Tên phòng *" style={inpSt} required />
+              <input name="capacity" defaultValue={editingRoom?.capacity} type="number" min={1} placeholder="Sức chứa (số ghế) *" style={inpSt} required />
+              <Btn full disabled={saving} style={{ marginTop: 8 }}>{saving ? <><span className="spin">⟳</span> Đang lưu...</> : (editingRoom ? "Cập nhật Phòng" : "Lưu Phòng")}</Btn>
             </form>
           )}
 
           {tab === "showtimes" && (
-            <form onSubmit={handleShowtime}>
-              <select name="movieId" style={inpSt} required onFocus={e => e.target.style.borderColor = "var(--gold)"} onBlur={e => e.target.style.borderColor = "var(--brd)"}>
+            <form key={editingShowtime ? editingShowtime.id : "new"} onSubmit={handleShowtime}>
+              <select name="movieId" defaultValue={editingShowtime?.movie?.id} style={inpSt} required>
                 <option value="">— Chọn phim —</option>
                 {movies.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
               </select>
-              <select name="roomId" style={inpSt} required onFocus={e => e.target.style.borderColor = "var(--gold)"} onBlur={e => e.target.style.borderColor = "var(--brd)"}>
+              <select name="roomId" defaultValue={editingShowtime?.room?.id} style={inpSt} required>
                 <option value="">— Chọn phòng chiếu —</option>
                 {rooms.map(r => <option key={r.id} value={r.id}>{r.name} ({r.capacity} ghế)</option>)}
               </select>
-              <label style={{ fontSize: 11, color: "var(--txt2)", display: "block", marginBottom: 5 }}>Thời gian bắt đầu</label>
-              <input name="startTime" type="datetime-local" style={inpSt} required onFocus={e => e.target.style.borderColor = "var(--gold)"} onBlur={e => e.target.style.borderColor = "var(--brd)"} />
-              <input name="basePrice" type="number" min={0} placeholder="Giá vé (VD: 90000) *" style={inpSt} required onFocus={e => e.target.style.borderColor = "var(--gold)"} onBlur={e => e.target.style.borderColor = "var(--brd)"} />
-              <Btn full disabled={saving}>{saving ? <><span className="spin">⟳</span> Đang lưu...</> : "Lưu suất chiếu"}</Btn>
+              <label style={{ fontSize: 11, color: "var(--txt2)", display: "block", marginBottom: 5 }}>Thời gian chiếu</label>
+              <input name="startTime" defaultValue={formatDateTimeLocal(editingShowtime?.showDate, editingShowtime?.startTime)} type="datetime-local" style={inpSt} required />
+              <input name="basePrice" defaultValue={editingShowtime?.basePrice} type="number" min={0} placeholder="Giá vé cơ bản (VD: 90000) *" style={inpSt} required />
+              <Btn full disabled={saving} style={{ marginTop: 8 }}>{saving ? <><span className="spin">⟳</span> Đang lưu...</> : (editingShowtime ? "Cập nhật Suất Chiếu" : "Lưu Suất Chiếu")}</Btn>
             </form>
           )}
         </Card>
 
-        {/* List */}
-        <Card style={{ padding: 22 }}>
-          <h3 style={{ fontFamily: "var(--ff)", fontStyle: "italic", fontSize: 18, marginBottom: 18 }}>Danh sách</h3>
+        {/* KHU VỰC DANH SÁCH (PHẢI) */}
+        <Card style={{ padding: 24 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+             <h3 style={{ fontFamily: "var(--ff)", fontStyle: "italic", fontSize: 20, margin: 0 }}>Danh sách</h3>
+             <span style={{ fontSize: 12, color: "var(--dim)" }}>Nhấn vào thẻ để sửa</span>
+          </div>
+
           {tab === "movies" && (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(140px,1fr))", gap: 14 }}>
-              {movies.map(m => <MovieCard key={m.id} movie={m} compact />)}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(140px,1fr))", gap: 16 }}>
+              {movies.map(m => (
+                 <div key={m.id} onClick={() => setEditingMovie(m)} style={{ cursor: "pointer", transition: "0.2s", outline: editingMovie?.id === m.id ? "2px solid var(--gold)" : "none", borderRadius: 12, outlineOffset: 2 }}>
+                    <MovieCard movie={m} compact />
+                 </div>
+              ))}
             </div>
           )}
+          
           {tab === "rooms" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {rooms.length === 0 && <p style={{ color: "var(--txt2)", fontSize: 14 }}>Chưa có phòng nào.</p>}
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {rooms.length === 0 && <p style={{ color: "var(--dim)", fontStyle: "italic" }}>Chưa có phòng nào.</p>}
               {rooms.map(r => (
-                <div key={r.id} style={{ padding: "12px 16px", background: "var(--bg3)", borderRadius: 9, border: "1px solid var(--brd)", display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ fontWeight: 500 }}>{r.name}</span>
+                <div key={r.id} onClick={() => setEditingRoom(r)} style={{ padding: "14px 18px", background: "var(--bg3)", borderRadius: 10, border: `1px solid ${editingRoom?.id === r.id ? "var(--gold)" : "var(--brd)"}`, display: "flex", justifyContent: "space-between", cursor: "pointer", transition: "0.2s" }} onMouseEnter={e=>e.currentTarget.style.borderColor="var(--gold)"} onMouseLeave={e=>{if(editingRoom?.id !== r.id) e.currentTarget.style.borderColor="var(--brd)"}}>
+                  <span style={{ fontWeight: 600, color: editingRoom?.id === r.id ? "var(--gold)" : "var(--txt)" }}>{r.name}</span>
                   <span style={{ color: "var(--txt2)", fontSize: 13 }}>{r.capacity} ghế</span>
                 </div>
               ))}
             </div>
           )}
+          
           {tab === "showtimes" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {showtimes.length === 0 && <p style={{ color: "var(--txt2)", fontSize: 14 }}>Chưa có suất chiếu nào.</p>}
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {showtimes.length === 0 && <p style={{ color: "var(--dim)", fontStyle: "italic" }}>Chưa có suất chiếu nào.</p>}
               {showtimes.map(st => (
-                <div key={st.id} style={{ padding: "13px 16px", background: "var(--bg3)", borderRadius: 9, border: "1px solid var(--brd)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div key={st.id} onClick={() => setEditingShowtime(st)} style={{ padding: "14px 18px", background: "var(--bg3)", borderRadius: 10, border: `1px solid ${editingShowtime?.id === st.id ? "var(--gold)" : "var(--brd)"}`, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", transition: "0.2s" }} onMouseEnter={e=>e.currentTarget.style.borderColor="var(--gold)"} onMouseLeave={e=>{if(editingShowtime?.id !== st.id) e.currentTarget.style.borderColor="var(--brd)"}}>
                   <div>
-                    <div style={{ fontFamily: "var(--ff)", fontWeight: 500, color: "var(--gold)" }}>{st.movie?.title || `Phim #${st.movie?.id}`}</div>
-                    <div style={{ fontSize: 12, color: "var(--txt2)", marginTop: 3 }}>{fmtDate(st.showDate)} · {fmtTime(st.startTime)} · {st.room?.name}</div>
+                    <div style={{ fontFamily: "var(--ff)", fontWeight: 600, fontSize: 18, color: editingShowtime?.id === st.id ? "var(--gold)" : "var(--txt)" }}>{st.movie?.title || "Phim bị xóa"}</div>
+                    <div style={{ fontSize: 13, color: "var(--txt2)", marginTop: 4 }}>📅 {fmtDate(st.showDate)} · ⏱ {fmtTime(st.startTime)} · 🏛 {st.room?.name}</div>
                   </div>
-                  <div style={{ color: "var(--gold)", fontWeight: 500, fontSize: 13 }}>{fmt(st.basePrice)}</div>
+                  <div style={{ color: "var(--gold)", fontWeight: 600, fontSize: 15, background: "rgba(223,166,91,0.1)", padding: "4px 10px", borderRadius: 6 }}>{fmt(st.basePrice)}</div>
                 </div>
               ))}
             </div>
@@ -1307,62 +1366,6 @@ function AdminPage() {
     </div>
   );
 }
-
-// ═══════════════════════════════════════════════════════════════
-//  LOGIN — POST /api/auth/login {email,password} → {token, user:{id,name,email}}
-//          POST /api/auth/register {name,email,password} → User
-// ═══════════════════════════════════════════════════════════════
-function LoginPage({ onLogin }) {
-  const [mode, setMode] = useState("login");
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState("");
-  const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
-
-  const handle = async () => {
-    if (!form.email || !form.password) return;
-    setLoading(true); setErr("");
-    try {
-      if (mode === "register") {
-        // POST /api/auth/register  body: {name, email, password}
-        await apiPost("/api/auth/register", { name: form.name, email: form.email, password: form.password });
-        alert("✅ Đăng ký thành công! Vui lòng đăng nhập.");
-        setMode("login");
-      } else {
-        // POST /api/auth/login  body: {email, password}  → {token, user:{id,name,email}}
-        const data = await apiPost("/api/auth/login", { email: form.email, password: form.password });
-        saveAuth(data.token, data.user);
-        onLogin(data.user);
-      }
-    } catch (e) {
-      setErr(e.message === "401" ? "Sai email hoặc mật khẩu." : "Lỗi kết nối server (" + e.message + ")");
-    }
-    setLoading(false);
-  };
-
-  return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", paddingTop: 60 }}>
-      <div className="fu" style={{ width: "100%", maxWidth: 380, padding: "36px 32px", background: "var(--bg2)", borderRadius: 16, border: "1px solid var(--brd)" }}>
-        <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <div style={{ fontFamily: "var(--ff)", fontStyle: "italic", fontSize: 26, fontWeight: 300, color: "var(--gold)" }}>◈ CINÉ</div>
-          <div style={{ color: "var(--txt2)", fontSize: 13, marginTop: 5 }}>{mode === "login" ? "Đăng nhập" : "Tạo tài khoản"}</div>
-        </div>
-        {err && <div style={{ background: "rgba(224,85,85,.12)", border: "1px solid rgba(224,85,85,.3)", borderRadius: 7, padding: "9px 13px", marginBottom: 14, fontSize: 13, color: "var(--red)" }}>{err}</div>}
-        {mode === "register" && <Field label="Họ tên" value={form.name} onChange={set("name")} placeholder="Nguyễn Văn A" />}
-        <Field label="Email" type="email" value={form.email} onChange={set("email")} placeholder="you@example.com" />
-        <Field label="Mật khẩu" type="password" value={form.password} onChange={set("password")} placeholder="••••••••" />
-        <Btn full disabled={loading} style={{ marginTop: 6 }} onClick={handle}>
-          {loading ? <><span className="spin">⟳</span> Đang xử lý...</> : (mode === "login" ? "Đăng nhập" : "Tạo tài khoản")}
-        </Btn>
-        <div style={{ textAlign: "center", marginTop: 14, fontSize: 13, color: "var(--txt2)" }}>
-          {mode === "login" ? <>Chưa có tài khoản? <span onClick={() => { setMode("register"); setErr(""); }} style={{ color: "var(--gold)", cursor: "pointer" }}>Đăng ký</span></>
-            : <>Đã có tài khoản? <span onClick={() => { setMode("login"); setErr(""); }} style={{ color: "var(--gold)", cursor: "pointer" }}>Đăng nhập</span></>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ═══════════════════════════════════════════════════════════════
 //  PROFILE — GET /api/orders/user/{userId}  → Page<Order>
 //  Order: {id, userId, showtime:{id,movie,room,showDate,startTime,basePrice}, totalAmount, status, tickets[], createdAt}
@@ -1435,25 +1438,141 @@ function ProfilePage({ user, setUser, setPage }) {
     </div>
   );
 }
+// ═══════════════════════════════════════════════════════════════
+//  LOGIN / REGISTER PAGE (PREMIUM UI)
+// ═══════════════════════════════════════════════════════════════
+function LoginPage({ onLogin }) {
+  const [mode, setMode] = useState("login"); // "login" hoặc "register"
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
+
+  const handleSubmit = async e => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      if (mode === "register") {
+        await apiPost("/api/auth/register", { name: form.name, email: form.email, password: form.password });
+        toast.success("Đăng ký thành công! Vui lòng đăng nhập.");
+        setMode("login");
+      } else {
+        const data = await apiPost("/api/auth/login", { email: form.email, password: form.password });
+        
+        // Kiểm tra xem backend có trả về token không
+        if (data && data.token) {
+          saveAuth(data.token, data.user);
+          toast.success("Đăng nhập thành công!");
+          onLogin(data.user);
+        } else {
+          throw new Error("Đăng nhập thất bại: Không nhận được phản hồi hợp lệ.");
+        }
+      }
+    } catch (error) {
+      toast.error(error.message || "Tài khoản hoặc mật khẩu không chính xác!");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden", padding: "20px" }}>
+      
+      {/* Cinematic Background Blur */}
+      <div style={{ position: "absolute", inset: 0, backgroundImage: "url('https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=2070')", backgroundSize: "cover", backgroundPosition: "center", filter: "blur(15px) brightness(0.3) saturate(1.2)", transform: "scale(1.1)", zIndex: 0 }} />
+
+      <Card className="fu" style={{ width: "100%", maxWidth: 420, padding: "40px 32px", position: "relative", zIndex: 1, background: "rgba(17,17,26,0.75)", backdropFilter: "blur(24px)", boxShadow: "0 24px 60px rgba(0,0,0,0.8)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 24 }}>
+        
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <div style={{ fontFamily: "var(--ff)", fontStyle: "italic", fontSize: 36, fontWeight: 700, color: "var(--gold)", letterSpacing: 2, marginBottom: 8, filter: "drop-shadow(0 0 10px rgba(223,166,91,0.3))" }}>◈ CINÉ</div>
+          <div style={{ fontSize: 14, color: "var(--txt2)", textTransform: "uppercase", letterSpacing: 1 }}>
+            {mode === "login" ? "Đăng nhập để trải nghiệm" : "Đăng ký thành viên mới"}
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {mode === "register" && (
+            <Field name="name" placeholder="Họ và tên" value={form.name} onChange={handleChange} required />
+          )}
+          <Field name="email" type="email" placeholder="Địa chỉ Email" value={form.email} onChange={handleChange} required />
+          <Field name="password" type="password" placeholder="Mật khẩu" value={form.password} onChange={handleChange} required />
+
+          <Btn size="lg" full disabled={loading} style={{ marginTop: 12, borderRadius: 12, padding: "16px", fontSize: 16, boxShadow: "0 8px 20px rgba(223,166,91,0.2)" }}>
+            {loading ? <span className="spin">⟳</span> : (mode === "login" ? "Đăng nhập ngay" : "Tạo tài khoản")}
+          </Btn>
+        </form>
+
+        <div style={{ marginTop: 28, textAlign: "center", fontSize: 14, color: "var(--txt2)" }}>
+          {mode === "login" ? "Chưa có tài khoản? " : "Đã có tài khoản? "}
+          <span 
+            onClick={() => { setMode(mode === "login" ? "register" : "login"); setForm({ name: "", email: "", password: "" }); }} 
+            style={{ color: "var(--gold)", cursor: "pointer", fontWeight: 600, transition: "0.2s" }} 
+            onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"} 
+            onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}
+          >
+            {mode === "login" ? "Đăng ký ngay" : "Đăng nhập"}
+          </span>
+        </div>
+
+      </Card>
+    </div>
+  );
+}
 
 // ═══════════════════════════════════════════════════════════════
-//  APP ROOT
+//  APP ROOT (LƯU LỊCH SỬ DUYỆT WEB ĐỂ QUAY LẠI)
 // ═══════════════════════════════════════════════════════════════
 export default function App() {
-  const [page, setPage] = useState("home");
+  // Dùng mảng History thay vì 1 String để lưu vết các trang đã qua
+  const [history, setHistory] = useState(["home"]);
+  const page = history[history.length - 1] || "home"; // Trang hiện tại luôn là phần tử cuối cùng của mảng
+
+  // Hàm chuyển trang thông minh
+  const setPage = useCallback((newPage) => {
+    setHistory(prev => {
+      if (prev[prev.length - 1] === newPage) return prev; // Đang ở trang đó rồi thì không push thêm
+      if (newPage === "home") return ["home"]; // Nếu ấn về Trang chủ thì xóa sạch lịch sử
+      return [...prev, newPage]; // Push trang mới vào lịch sử
+    });
+  }, []);
+
+  // Hàm lùi lại trang trước đó
+  const goBack = useCallback(() => {
+    // Chỉ lùi nếu mảng có lớn hơn 1 phần tử (Nghĩa là có trang để lùi)
+    setHistory(prev => prev.length > 1 ? prev.slice(0, -1) : prev);
+  }, []);
+
   const [selMovie, setSelMovie] = useState(null);
   const [booking, setBooking] = useState(null);
   const [user, setUser] = useState(loadUser);
 
   const goMovie = m => { setSelMovie(m); setPage("movie"); };
   const goBook = m => { if (!user) { setSelMovie(m); setPage("login"); return; } setSelMovie(m); setPage("booking"); };
-  const goConfirm = b => { setBooking(b); setPage("confirm"); };
-  const goLogin = u => { setUser(u); setPage(selMovie ? "booking" : "home"); };
 
-  return (
+  const goConfirm = b => {
+    setBooking(b);
+    // XÓA LỊCH SỬ BOOKING: Khi thanh toán xong, ta ép lịch sử chỉ còn ["home", "confirm"]
+    // Điều này chặn khách hàng ấn nút Back để quay ngược lại trang thanh toán gây lỗi double-booking
+    setHistory(["home", "confirm"]);
+  };
+
+  const goLogin = u => {
+    setUser(u);
+    // XÓA TRANG LOGIN: Khi login thành công, ta xóa cái bước "login" ra khỏi mảng lịch sử.
+    // Để khi người dùng ấn nút Back từ trang Booking, nó sẽ lùi thẳng về trang Chi Tiết Phim chứ không bắt đăng nhập lại.
+    setHistory(prev => {
+      const cleanHistory = prev.filter(p => p !== "login");
+      if (selMovie) return [...cleanHistory, "booking"];
+      return ["home"];
+    });
+  };
+
+return (
     <>
       <style>{CSS}</style>
-      <Navbar page={page} setPage={setPage} user={user} setUser={setUser} />
+      <ToastContainer /> {/* <--- THÊM DÒNG NÀY VÀO ĐÂY */}
+      
+      <Navbar page={page} setPage={setPage} user={user} setUser={setUser} canGoBack={history.length > 1} goBack={goBack} />
       {page === "home" && <HomePage onSelect={goMovie} />}
       {page === "search" && <SearchPage onSelect={goMovie} />}
       {page === "movie" && selMovie && <MovieDetailPage movie={selMovie} onBook={goBook} />}
@@ -1464,5 +1583,53 @@ export default function App() {
       {page === "admin" && <AdminPage />}
       {page === "scanner" && <TicketScannerPage />}
     </>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  TOAST NOTIFICATION SYSTEM (THÔNG BÁO NỔI)
+// ═══════════════════════════════════════════════════════════════
+export const toast = {
+  listeners: [],
+  success(msg) { this.listeners.forEach(l => l({ id: Date.now() + Math.random(), msg, type: "success" })); },
+  error(msg) { this.listeners.forEach(l => l({ id: Date.now() + Math.random(), msg, type: "error" })); },
+  info(msg) { this.listeners.forEach(l => l({ id: Date.now() + Math.random(), msg, type: "info" })); },
+  subscribe(listener) {
+    this.listeners.push(listener);
+    return () => this.listeners = this.listeners.filter(l => l !== listener);
+  }
+};
+
+function ToastContainer() {
+  const [toasts, setToasts] = useState([]);
+
+  useEffect(() => {
+    const unsub = toast.subscribe(t => {
+      setToasts(prev => [...prev, t]);
+      // Tự động tắt sau 3.5 giây
+      setTimeout(() => {
+        setToasts(prev => prev.filter(x => x.id !== t.id));
+      }, 3500);
+    });
+    return unsub;
+  }, []);
+
+  return (
+    <div style={{ position: "fixed", top: 24, right: 24, zIndex: 99999, display: "flex", flexDirection: "column", gap: 12 }}>
+      {toasts.map(t => (
+        <div key={t.id} style={{ 
+          background: "rgba(17,17,26,0.85)", color: "var(--txt)", padding: "16px 24px", borderRadius: 16, 
+          boxShadow: "0 10px 40px rgba(0,0,0,0.8)", border: "1px solid var(--brd)",
+          borderLeft: `4px solid ${t.type === "success" ? "var(--aqua)" : t.type === "error" ? "var(--red)" : "var(--gold)"}`, 
+          display: "flex", alignItems: "center", gap: 14, minWidth: 300, backdropFilter: "blur(16px)",
+          animation: "slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards"
+        }}>
+          <div style={{ fontSize: 22, filter: "drop-shadow(0 0 10px currentColor)", color: t.type === "success" ? "var(--aqua)" : t.type === "error" ? "var(--red)" : "var(--gold)" }}>
+            {t.type === "success" ? "✓" : t.type === "error" ? "✕" : "ℹ"}
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 500, lineHeight: 1.4 }}>{t.msg}</div>
+        </div>
+      ))}
+    </div>
   );
 }

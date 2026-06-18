@@ -1,0 +1,129 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns: "*"
+            allowedMethods: [ GET, POST, PUT, DELETE, OPTIONS ]
+            allowedHeaders:
+              - "Authorization"
+              - "Content-Type"
+              - "X-Gateway-Source"
+            allowCredentials: true
+            maxAge: 3600
+
+      routes:
+        # --- CÁC ROUTE KHÔNG YÊU CẦU TOKEN (SWAGGER & AUTH) ---
+        - id: openapi-movie
+          uri: lb://movie-service
+          predicates:
+            - Path=/api/movie/api-docs
+          filters:
+            - RewritePath=/api/movie/(?<segment>.*), /$\{segment}
+
+        - id: openapi-search
+          uri: lb://search-client-service
+          predicates:
+            - Path=/api/search/api-docs
+          filters:
+            - RewritePath=/api/search/(?<segment>.*), /$\{segment}
+
+        - id: openapi-auth
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/auth/api-docs
+          filters:
+            - RewritePath=/api/auth/(?<segment>.*), /$\{segment}
+
+        - id: auth-service
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/auth/**
+
+        # --- CÁC ROUTE YÊU CẦU TOKEN (CÓ THÊM AuthenticationFilter) ---
+        - id: search-service
+          uri: lb://search-client-service
+          predicates:
+            - Path=/api/search/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 20
+                redis-rate-limiter.burstCapacity: 40
+            - AddRequestHeader=X-Gateway-Source, api-gateway
+            - AuthenticationFilter
+
+        - id: related-service
+          uri: lb://related-service
+          predicates:
+            - Path=/api/related/**
+          filters:
+            - AddRequestHeader=X-Gateway-Source, api-gateway
+            - AuthenticationFilter
+
+        - id: movie-service
+          uri: lb://movie-service
+          predicates:
+            - Path=/api/movies/**, /api/showtimes/**, /api/rooms/**, /api/orders/**
+          filters:
+            - AddRequestHeader=X-Gateway-Source, api-gateway
+            - AuthenticationFilter
+
+      default-filters:
+        - name: Retry
+          args:
+            retries: 2
+            statuses: BAD_GATEWAY, SERVICE_UNAVAILABLE
+            methods: GET
+            backoff:
+              firstBackoff: 100ms
+              maxBackoff: 500ms
+              factor: 2
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui/index.html
+    enabled: true
+    urls:
+      - name: Movie Service API
+        url: /api/movie/api-docs
+      - name: Search Service API
+        url: /api/search/api-docs
+      - name: Auth Service API
+        url: /api/auth/api-docs
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  endpoint:
+    gateway:
+      enabled: true
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO
+    com.movie: DEBUG
+
+data:
+  redis:
+    host: localhost
+    port: 6379

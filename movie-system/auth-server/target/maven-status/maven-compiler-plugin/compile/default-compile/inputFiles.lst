@@ -1,0 +1,9 @@
+/Users/vukhanhlinh/Desktop/Python/movie-system/auth-server/src/main/java/com/movie/auth/repository/UserRepository.java
+/Users/vukhanhlinh/Desktop/Python/movie-system/auth-server/src/main/java/com/movie/auth/AuthServerApplication.java
+/Users/vukhanhlinh/Desktop/Python/movie-system/auth-server/src/main/java/com/movie/auth/config/OpenApiConfig.java
+/Users/vukhanhlinh/Desktop/Python/movie-system/auth-server/src/main/java/com/movie/auth/controller/AuthController.java
+/Users/vukhanhlinh/Desktop/Python/movie-system/auth-server/src/main/java/com/movie/auth/config/SecurityConfig.java
+/Users/vukhanhlinh/Desktop/Python/movie-system/auth-server/src/main/java/com/movie/auth/entity/dto/LoginDto.java
+/Users/vukhanhlinh/Desktop/Python/movie-system/auth-server/src/main/java/com/movie/auth/config/JwtAuthenticationFilter.java
+/Users/vukhanhlinh/Desktop/Python/movie-system/auth-server/src/main/java/com/movie/auth/component/JwtUtils.java
+/Users/vukhanhlinh/Desktop/Python/movie-system/auth-server/src/main/java/com/movie/auth/entity/User.java

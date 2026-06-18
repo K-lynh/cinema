@@ -1,0 +1,3 @@
+/Users/vukhanhlinh/Desktop/Python/movie-system/api-gateway/src/main/java/com/movie/ApiGatewayApplication.java
+/Users/vukhanhlinh/Desktop/Python/movie-system/api-gateway/src/main/java/com/movie/gateway/filter/AuthenticationFilter.java
+/Users/vukhanhlinh/Desktop/Python/movie-system/api-gateway/src/main/java/com/movie/gateway/util/JwtUtil.java

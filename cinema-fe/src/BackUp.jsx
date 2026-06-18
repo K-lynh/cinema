@@ -224,7 +224,7 @@ function Navbar({ page, setPage, user, setUser }) {
     <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, height: 60, padding: "0 5vw", display: "flex", alignItems: "center", justifyContent: "space-between", background: scrolled ? "rgba(8,8,16,.94)" : "transparent", backdropFilter: scrolled ? "blur(18px)" : "none", borderBottom: scrolled ? "1px solid var(--brd)" : "none", transition: "all .3s" }}>
       <div onClick={() => setPage("home")} style={{ fontFamily: "var(--ff)", fontStyle: "italic", fontSize: 22, fontWeight: 300, color: "var(--gold)", cursor: "pointer", letterSpacing: 1 }}>◈ CINÉ</div>
       <div style={{ display: "flex", gap: 4 }}>
-        {[["home", "Trang chủ"], ["search", "Tìm kiếm AI"], ["admin", "Admin"]].map(([k, l]) => (
+        {[["home", "Trang chủ"], ["search", "Tìm kiếm AI"], ["admin", "Admin"], ["scanner", "Soát vé"]].map(([k, l]) => (
           <button key={k} onClick={() => setPage(k)} style={{ padding: "6px 14px", borderRadius: 6, fontSize: 13, fontWeight: 500, border: "none", cursor: "pointer", transition: "all .2s", color: page === k ? "var(--gold)" : "var(--txt2)", background: page === k ? "rgba(201,145,74,.12)" : "transparent" }}>{l}</button>
         ))}
       </div>
@@ -898,6 +898,144 @@ function ConfirmationPage({ booking, onHome }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  SCANNER PAGE — TRANG SOÁT VÉ CHO NHÂN VIÊN (Khớp với OrderQRDto)
+// ═══════════════════════════════════════════════════════════════
+function TicketScannerPage() {
+  const [code, setCode] = useState("");
+  const [order, setOrder] = useState(null); // Dữ liệu giờ là OrderQRDto
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
+  const inputRef = useRef(null);
+
+  // LUÔN GIỮ FOCUS VÀO Ô INPUT: Để máy quét QR vật lý có thể tự động "gõ" vào bất cứ lúc nào
+  useEffect(() => {
+    inputRef.current?.focus();
+    const handleBlur = () => setTimeout(() => inputRef.current?.focus(), 100);
+    window.addEventListener("click", handleBlur);
+    return () => window.removeEventListener("click", handleBlur);
+  }, []);
+
+  const handleSearch = async () => {
+    if (!code.trim()) return;
+    setLoading(true); setErr(""); setOrder(null);
+    try {
+      // Gọi API trả về OrderQRDto
+      const data = await apiGet(`/api/orders/code/${code.trim()}`);
+      setOrder(data);
+      setCode(""); // Xóa trắng để quét vé tiếp theo
+    } catch (error) {
+      setErr("Mã vé không hợp lệ hoặc không tìm thấy đơn hàng.");
+      setCode("");
+    } finally {
+      setLoading(false);
+      inputRef.current?.focus();
+    }
+  };
+
+  const handleCheckIn = async () => {
+    // Logic xác nhận vé vào rạp
+    alert(`✅ Đã xác nhận vé cho khách hàng: ${order.userName}`);
+    setOrder(null); // Reset màn hình chờ quét khách tiếp theo
+    inputRef.current?.focus();
+  };
+
+  return (
+    <div style={{ paddingTop: 80, minHeight: "100vh", paddingBottom: 80, display: "flex", flexDirection: "column", alignItems: "center" }}>
+      <div style={{ width: "100%", maxWidth: 600, padding: "0 5vw" }}>
+
+        <div style={{ textAlign: "center", marginBottom: 30 }}>
+          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(201,145,74,0.15)", border: "2px solid rgba(201,145,74,0.4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, margin: "0 auto 16px", color: "var(--gold)" }}>
+            📷
+          </div>
+          <h1 style={{ fontFamily: "var(--ff)", fontSize: 32, fontWeight: 300, color: "var(--gold)" }}>Soát vé điện tử</h1>
+          <p style={{ color: "var(--txt2)", fontSize: 14 }}>Dùng máy quét QR để tít mã (Tự động nhận diện)</p>
+        </div>
+
+        {/* Ô Nhập Mã - Máy Quét QR sẽ gõ thẳng vào đây và tự kích hoạt onKeyDown Enter */}
+        <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+          <input
+            ref={inputRef}
+            value={code}
+            onChange={e => setCode(e.target.value.toUpperCase())}
+            onKeyDown={e => e.key === "Enter" && handleSearch()}
+            placeholder="SẴN SÀNG QUÉT MÃ..."
+            autoFocus
+            style={{ flex: 1, padding: "16px 24px", borderRadius: 12, background: "var(--bg2)", border: "2px solid var(--gold)", color: "var(--gold)", fontSize: 20, fontWeight: "bold", outline: "none", letterSpacing: 2, textTransform: "uppercase" }}
+          />
+          <Btn size="lg" onClick={handleSearch} disabled={loading || !code.trim()}>
+            {loading ? <span className="spin">⟳</span> : "Kiểm tra"}
+          </Btn>
+        </div>
+
+        {err && (
+          <div className="fu" style={{ background: "rgba(224,85,85,.15)", border: "1px solid rgba(224,85,85,.3)", borderRadius: 12, padding: "16px", textAlign: "center", color: "var(--red)", marginBottom: 24 }}>
+            ⚠️ {err}
+          </div>
+        )}
+
+        {/* Hiển thị thông tin Vé dựa trên OrderQRDto mới */}
+        {order && (
+          <Card className="fu" style={{ overflow: "hidden", border: "1px solid var(--brd)", borderRadius: 16 }}>
+            <div style={{ background: "linear-gradient(135deg, rgba(78,205,196,0.15), transparent)", padding: "20px 24px", borderBottom: "1px solid var(--brd)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: 11, color: "var(--txt2)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Trạng thái vé</div>
+                <Badge color="var(--aqua)">HỢP LỆ</Badge>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 11, color: "var(--txt2)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Mã Đơn</div>
+                <div style={{ fontFamily: "var(--fb)", fontSize: 18, fontWeight: 700, color: "var(--gold)" }}>{order.orderCode}</div>
+              </div>
+            </div>
+
+            <div style={{ padding: 24 }}>
+
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
+                <div>
+                  <div style={{ fontSize: 11, color: "var(--dim)", textTransform: "uppercase" }}>Khách hàng</div>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: "#fff" }}>{order.userName || "Khách Vãng Lai"}</div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 11, color: "var(--dim)", textTransform: "uppercase" }}>Tổng thanh toán</div>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: "var(--gold)" }}>{fmt(order.totalAmount)}</div>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, background: "var(--bg)", padding: 16, borderRadius: 12 }}>
+                <div>
+                  <div style={{ fontSize: 11, color: "var(--dim)", textTransform: "uppercase" }}>Suất chiếu</div>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: "var(--gold)" }}>{fmtTime(order.startTime)}</div>
+                  <div style={{ fontSize: 13, color: "var(--txt2)" }}>{fmtDate(order.showDate)}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: "var(--dim)", textTransform: "uppercase" }}>Phòng chiếu</div>
+                  <div style={{ fontSize: 16, fontWeight: 600 }}>{order.roomName || "—"}</div>
+                </div>
+              </div>
+
+              <div style={{ marginTop: 20 }}>
+                <div style={{ fontSize: 11, color: "var(--dim)", textTransform: "uppercase", marginBottom: 8 }}>Danh sách ghế</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {/* FE xử lý cắt chuỗi "A1, A2" thành mảng để in từng Badge ghế ra */}
+                  {order.seatNumber ? order.seatNumber.split(",").map(seat => (
+                    <Badge key={seat.trim()} color="var(--gold)">Ghế {seat.trim()}</Badge>
+                  )) : <span style={{ color: "var(--dim)" }}>Không có thông tin ghế</span>}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ padding: 20, background: "var(--bg2)", borderTop: "1px solid var(--brd)" }}>
+              <Btn full size="lg" onClick={handleCheckIn} variant="aqua">
+                Đánh dấu khách đã vào rạp
+              </Btn>
+            </div>
+          </Card>
+        )}
+
+      </div>
+    </div>
+  );
+}
+// ═══════════════════════════════════════════════════════════════
 //  SEARCH — POST /api/search/natural → SearchResponse{query,results[],parsedIntent,totalFound}
 // ═══════════════════════════════════════════════════════════════
 function SearchPage({ onSelect }) {
@@ -1324,6 +1462,7 @@ export default function App() {
       {page === "login" && <LoginPage onLogin={goLogin} />}
       {page === "profile" && user && <ProfilePage user={user} setUser={setUser} setPage={setPage} />}
       {page === "admin" && <AdminPage />}
+      {page === "scanner" && <TicketScannerPage />}
     </>
   );
 }
